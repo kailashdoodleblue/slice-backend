@@ -12,7 +12,7 @@ export class UserController {
   };
 
   getUserById = async (req: Request, res: Response) => {
-    const user = await userService.getUserById(Number(req.params.id));
+    const user = await userService.getUserById(req.params.id);
     return sendResponse(res, {
       message: "User retrieved successfully",
       data: user,
@@ -29,7 +29,7 @@ export class UserController {
   };
 
   updateUser = async (req: Request, res: Response) => {
-    const user = await userService.updateUser(Number(req.params.id), req.body);
+    const user = await userService.updateUser(req.params.id, req.body);
     return sendResponse(res, {
       message: "User updated successfully",
       data: user,
@@ -37,7 +37,7 @@ export class UserController {
   };
 
   deleteUser = async (req: Request, res: Response) => {
-    await userService.deleteUser(Number(req.params.id));
+    await userService.deleteUser(req.params.id);
     return sendResponse(res, {
       message: "User deleted successfully",
     });

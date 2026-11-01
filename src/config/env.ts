@@ -12,4 +12,12 @@ export const env = {
     password: process.env.DB_PASSWORD || "",
     database: process.env.DB_NAME || "app_db",
   },
+  admin: {
+    email: process.env.ADMIN_EMAIL || "admin@slice.com",
+    password: process.env.ADMIN_PASSWORD || "Admin@123456",
+  },
+  jwt: {
+    secret: process.env.JWT_SECRET || "slice_backend_jwt_super_secret_key_2026",
+    expiresIn: process.env.JWT_EXPIRES_IN || "1d",
+  },
 };

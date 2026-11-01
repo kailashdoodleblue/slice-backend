@@ -5,22 +5,36 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToOne,
 } from "typeorm";
+import { Staff } from "./staff.entity";
+import { UserRole, AccountStatus, UserStatus } from "../constants";
+
+export { UserRole, AccountStatus, UserStatus };
 
 @Entity("users")
 export class User extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn({ type: "bigint" })
+  id: string;
 
-  @Column({ length: 100 })
-  name: string;
-
-  @Column({ unique: true, length: 150 })
+  @Column({ type: "varchar", length: 150, unique: true })
   email: string;
 
-  @CreateDateColumn()
+  @Column({ type: "varchar", length: 255, select: false })
+  password: string;
+
+  @Column({ type: "varchar", length: 50 })
+  role: string;
+
+  @Column({ type: "varchar", length: 20, default: AccountStatus.ACTIVE })
+  status: string;
+
+  @CreateDateColumn({ type: "datetime" })
   createdAt: Date;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
+  @UpdateDateColumn({ type: "datetime", nullable: true })
+  updatedAt: Date | null;
+
+  @OneToOne(() => Staff, (staff) => staff.user)
+  staff?: Staff;
 }

@@ -2,11 +2,14 @@ import "reflect-metadata";
 import app from "./app";
 import { env } from "./config/env";
 import { AppDataSource } from "./config/data-source";
+import { seedAdminUser } from "./seed/admin.seed";
 
 const start = async () => {
   try {
     await AppDataSource.initialize();
     console.log("✅ MySQL connected");
+
+    await seedAdminUser();
 
     const server = app.listen(env.port, () => {
       console.log(`🚀 Server running on http://localhost:${env.port}`);
