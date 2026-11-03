@@ -24,7 +24,21 @@ export class AuthController {
       message: "Logged out successfully",
     });
   };
+
+  forgotPassword = async (req: Request, res: Response) => {
+    const result = await authService.forgotPassword(req.body);
+    return sendResponse(res, {
+      message: "Password reset link has been sent to your email",
+      data: result,
+    });
+  };
+
+  resetPassword = async (req: Request, res: Response) => {
+    const result = await authService.resetPassword(req.body);
+    return sendResponse(res, {
+      message: result.message,
+    });
+  };
 }
 
 export const authController = new AuthController();
-

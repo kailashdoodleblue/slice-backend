@@ -5,7 +5,12 @@ import { UserRole, UserStatus } from "../../constants";
 import { Staff } from "../../entities/staff.entity";
 import { Merchant } from "../../entities/merchant.entity";
 import { AppError } from "../../utils/AppError";
-import { CreateStaffInput, UpdateStaffInput } from "./staff.validation";
+import { getPaginationMeta } from "../../utils/pagination";
+import {
+  CreateStaffInput,
+  UpdateStaffInput,
+  GetStaffQuery,
+} from "./staff.validation";
 
 export class StaffService {
   async createStaff(input: CreateStaffInput) {
@@ -78,11 +83,51 @@ export class StaffService {
     });
   }
 
-  async getAllStaff(): Promise<Staff[]> {
-    return Staff.find({
-      order: { staffId: "DESC" },
-      relations: ["user", "merchant"],
-    });
+  async getAllStaff(query: GetStaffQuery = {}) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 7;
+    const skip = (page - 1) * limit;
+
+    const status = query.status ? query.status.toLowerCase() : "all";
+    const search = query.search ? query.search.trim() : undefined;
+    const merchantId = query.merchantId ? query.merchantId.trim() : undefined;
+
+    const qb = Staff.createQueryBuilder("staff")
+      .leftJoinAndSelect("staff.user", "user")
+      .leftJoinAndSelect("staff.merchant", "merchant");
+
+    // Filter by user account status: 'all' (default), 'active', or 'inactive'
+    if (status === "active") {
+      qb.andWhere("LOWER(user.status) = :status", { status: "active" });
+    } else if (status === "inactive") {
+      qb.andWhere("LOWER(user.status) = :status", { status: "inactive" });
+    }
+
+    // Filter by merchantId if provided
+    if (merchantId) {
+      qb.andWhere("staff.merchantId = :merchantId", { merchantId });
+    }
+
+    // Filter by search: matches full name, mobile number, user email, or merchant business name
+    if (search) {
+      qb.andWhere(
+        "(LOWER(staff.fullName) LIKE :search OR " +
+          "LOWER(staff.mobileNumber) LIKE :search OR " +
+          "LOWER(user.email) LIKE :search OR " +
+          "LOWER(merchant.businessName) LIKE :search)",
+        { search: `%${search.toLowerCase()}%` }
+      );
+    }
+
+    qb.orderBy("staff.staffId", "DESC");
+    qb.skip(skip).take(limit);
+
+    const [staffList, total] = await qb.getManyAndCount();
+
+    return {
+      staff: staffList,
+      meta: getPaginationMeta(total, page, limit),
+    };
   }
 
   async getStaffById(staffId: string): Promise<Staff> {

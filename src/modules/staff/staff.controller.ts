@@ -12,11 +12,12 @@ export class StaffController {
     });
   };
 
-  getAllStaff = async (_req: Request, res: Response) => {
-    const staffList = await staffService.getAllStaff();
+  getAllStaff = async (req: Request, res: Response) => {
+    const { staff, meta } = await staffService.getAllStaff(req.query);
     return sendResponse(res, {
       message: "Staff list retrieved successfully",
-      data: staffList,
+      data: staff,
+      meta,
     });
   };
 
@@ -49,4 +50,3 @@ export class StaffController {
 }
 
 export const staffController = new StaffController();
-
