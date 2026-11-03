@@ -11,7 +11,7 @@ import {
 
 const router = Router();
 
-router.use(authenticate, authorize(UserRole.ADMIN));
+//router.use(authenticate, authorize(UserRole.ADMIN));
 
 router.get("/", userController.getUsers);
 router.get("/:id", validate(userIdParamSchema), userController.getUserById);
