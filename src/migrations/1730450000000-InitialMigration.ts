@@ -200,6 +200,13 @@ export class InitialMigration1730450000000 implements MigrationInterface {
             isNullable: false,
           },
           {
+            name: "countryCode",
+            type: "varchar",
+            length: "10",
+            default: "'+971'",
+            isNullable: false,
+          },
+          {
             name: "mobileNumber",
             type: "varchar",
             length: "20",

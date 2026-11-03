@@ -57,6 +57,7 @@ export class StaffService {
         userId: savedUser.id,
         fullName: input.fullName.trim(),
         merchantId: input.merchantId,
+        countryCode: input.countryCode ? input.countryCode.trim() : "+971",
         mobileNumber: input.mobileNumber.trim(),
       });
       const savedStaff = await manager.getRepository(Staff).save(staff);
@@ -64,6 +65,7 @@ export class StaffService {
       return {
         staffId: savedStaff.staffId,
         fullName: savedStaff.fullName,
+        countryCode: savedStaff.countryCode,
         mobileNumber: savedStaff.mobileNumber,
         merchantId: savedStaff.merchantId,
         createdAt: savedStaff.createdAt,
@@ -108,11 +110,12 @@ export class StaffService {
       qb.andWhere("staff.merchantId = :merchantId", { merchantId });
     }
 
-    // Filter by search: matches full name, mobile number, user email, or merchant business name
+    // Filter by search: matches full name, mobile number, country code, user email, or merchant business name
     if (search) {
       qb.andWhere(
         "(LOWER(staff.fullName) LIKE :search OR " +
           "LOWER(staff.mobileNumber) LIKE :search OR " +
+          "LOWER(staff.countryCode) LIKE :search OR " +
           "LOWER(user.email) LIKE :search OR " +
           "LOWER(merchant.businessName) LIKE :search)",
         { search: `%${search.toLowerCase()}%` }
@@ -152,6 +155,10 @@ export class StaffService {
         throw AppError.conflict("Mobile number is already registered");
       }
       staff.mobileNumber = input.mobileNumber.trim();
+    }
+
+    if (input.countryCode !== undefined) {
+      staff.countryCode = input.countryCode.trim();
     }
 
     if (input.fullName !== undefined) {
