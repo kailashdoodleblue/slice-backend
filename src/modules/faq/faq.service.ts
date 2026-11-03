@@ -1,6 +1,6 @@
 import { FAQ } from "../../entities/faq.entity";
 import { AppError } from "../../utils/AppError";
-import { CreateFAQInput } from "./faq.validation";
+import { CreateFAQInput, UpdateFAQInput } from "./faq.validation";
 
 export class FAQService {
   async createFAQ(input: CreateFAQInput): Promise<FAQ> {
@@ -26,7 +26,10 @@ export class FAQService {
   }
 
   async updateFAQ(id: string, input: UpdateFAQInput): Promise<FAQ> {
-    const faq = await this.getFAQById(id);
+    const faq = await FAQ.findOneBy({ id });
+    if (!faq) {
+      throw AppError.notFound("FAQ not found");
+    }
 
     if (input.question !== undefined) faq.question = input.question;
     if (input.answer !== undefined) faq.answer = input.answer;
@@ -35,7 +38,11 @@ export class FAQService {
   }
 
   async deleteFAQ(id: string): Promise<void> {
-    const faq = await this.getFAQById(id);
+    const faq = await FAQ.findOneBy({ id });
+    if (!faq) {
+      throw AppError.notFound("FAQ not found");
+    }
+
     await faq.remove();
   }
 }

@@ -16,12 +16,12 @@ export class MerchantService {
     });
 
     if (!lastMerchant || !lastMerchant.merchantCode) {
-      return "MRC-0001";
+      return "MRC-001";
     }
 
     const match = lastMerchant.merchantCode.match(/\d+$/);
     const nextNumber = match ? parseInt(match[0], 10) + 1 : 1;
-    return `MRC-${nextNumber.toString().padStart(4, "0")}`;
+    return `MRC-${nextNumber.toString().padStart(3, "0")}`;
   }
 
   async createMerchant(input: CreateMerchantInput): Promise<Merchant> {
