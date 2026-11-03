@@ -30,6 +30,7 @@ export class MerchantService {
       city: input.city || null,
       postalCode: input.postalCode || null,
       status: input.status || "Active",
+      incentivePercentage: input.incentivePercentage ?? 0,
     });
 
     return merchant.save();
@@ -142,6 +143,7 @@ export class MerchantService {
     if (input.city !== undefined) merchant.city = input.city || null;
     if (input.postalCode !== undefined) merchant.postalCode = input.postalCode || null;
     if (input.status !== undefined) merchant.status = input.status;
+    if (input.incentivePercentage !== undefined) merchant.incentivePercentage = input.incentivePercentage;
 
     return merchant.save();
   }

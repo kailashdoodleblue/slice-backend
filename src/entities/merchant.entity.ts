@@ -57,6 +57,20 @@ export class Merchant extends BaseEntity {
   @Column({ type: "varchar", length: 20, default: MerchantStatus.ACTIVE })
   status: string;
 
+  // Incentive percentage (e.g. 5.50 = 5.5%) applied to submitted transactions
+  @Column({
+    type: "decimal",
+    precision: 5,
+    scale: 2,
+    default: 0,
+    transformer: {
+      to: (value?: number | null) => value,
+      from: (value?: string | null) =>
+        value === null || value === undefined ? value : Number(value),
+    },
+  })
+  incentivePercentage: number;
+
   @CreateDateColumn({ type: "datetime" })
   createdAt: Date;
 
