@@ -21,6 +21,22 @@ export class MerchantController {
     });
   };
 
+  getMerchantDropdown = async (_req: Request, res: Response) => {
+    const merchants = await merchantService.getMerchantDropdown();
+    return sendResponse(res, {
+      message: "Merchant dropdown list retrieved successfully",
+      data: merchants,
+    });
+  };
+
+  getLocationDropdown = async (_req: Request, res: Response) => {
+    const locations = await merchantService.getLocationDropdown();
+    return sendResponse(res, {
+      message: "Location dropdown list retrieved successfully",
+      data: locations,
+    });
+  };
+
   getMerchantById = async (req: Request, res: Response) => {
     const merchant = await merchantService.getMerchantById(req.params.id);
     return sendResponse(res, {

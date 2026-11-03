@@ -1,10 +1,10 @@
 import Joi from "joi";
 
 export interface CreateMerchantInput {
-  merchantCode: string;
   businessName: string;
   businessEmail: string;
   contactPerson?: string;
+  countryCode?: string;
   phoneNumber?: string;
   businessType?: string;
   countryMarket?: string;
@@ -18,7 +18,6 @@ export interface CreateMerchantInput {
 }
 
 export interface UpdateMerchantInput {
-  merchantCode?: string;
   businessName?: string;
   businessEmail?: string;
   contactPerson?: string;
@@ -67,10 +66,6 @@ export const getMerchantsQuerySchema = Joi.object({
 
 export const createMerchantSchema = Joi.object({
   body: Joi.object({
-    merchantCode: Joi.string().trim().max(50).required().messages({
-      "string.empty": "Merchant code is required",
-      "any.required": "Merchant code is required",
-    }),
     businessName: Joi.string().trim().max(150).required().messages({
       "string.empty": "Business name is required",
       "any.required": "Business name is required",
@@ -81,6 +76,7 @@ export const createMerchantSchema = Joi.object({
       "any.required": "Business email is required",
     }),
     contactPerson: Joi.string().trim().max(150).allow(null, "").optional(),
+    countryCode: Joi.string().trim().max(10).allow(null, "").optional(),
     phoneNumber: Joi.string().trim().max(20).allow(null, "").optional(),
     businessType: Joi.string().trim().max(100).allow(null, "").optional(),
     countryMarket: Joi.string().trim().max(100).allow(null, "").optional(),
@@ -101,7 +97,6 @@ export const updateMerchantSchema = Joi.object({
     }),
   }).required(),
   body: Joi.object({
-    merchantCode: Joi.string().trim().max(50).optional(),
     businessName: Joi.string().trim().max(150).optional(),
     businessEmail: Joi.string().trim().email().max(150).optional(),
     contactPerson: Joi.string().trim().max(150).allow(null, "").optional(),
