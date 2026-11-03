@@ -1,7 +1,11 @@
 export class AppError extends Error {
   public readonly isOperational: boolean = true;
 
-  constructor(public statusCode: number, message: string) {
+  constructor(
+    public statusCode: number,
+    message: string,
+    public details?: Record<string, unknown>
+  ) {
     super(message);
     Object.setPrototypeOf(this, AppError.prototype);
   }
@@ -22,8 +26,8 @@ export class AppError extends Error {
     return new AppError(404, message);
   }
 
-  static conflict(message: string): AppError {
-    return new AppError(409, message);
+  static conflict(message: string, details?: Record<string, unknown>): AppError {
+    return new AppError(409, message, details);
   }
 
   static internal(message = "Internal server error"): AppError {

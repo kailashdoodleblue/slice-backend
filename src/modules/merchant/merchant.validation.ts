@@ -15,6 +15,7 @@ export interface CreateMerchantInput {
   city?: string;
   postalCode?: string;
   status?: string;
+  incentivePercentage?: number;
 }
 
 export interface UpdateMerchantInput {
@@ -31,6 +32,7 @@ export interface UpdateMerchantInput {
   city?: string;
   postalCode?: string;
   status?: string;
+  incentivePercentage?: number;
 }
 
 export interface GetMerchantsQuery {
@@ -87,6 +89,11 @@ export const createMerchantSchema = Joi.object({
     city: Joi.string().trim().max(100).allow(null, "").optional(),
     postalCode: Joi.string().trim().max(20).allow(null, "").optional(),
     status: Joi.string().valid("Active", "Inactive").default("Active").optional(),
+    incentivePercentage: Joi.number().precision(2).min(0).max(100).default(0).optional().messages({
+      "number.base": "Incentive percentage must be a number",
+      "number.min": "Incentive percentage cannot be negative",
+      "number.max": "Incentive percentage cannot exceed 100",
+    }),
   }).required(),
 });
 
@@ -110,6 +117,11 @@ export const updateMerchantSchema = Joi.object({
     city: Joi.string().trim().max(100).allow(null, "").optional(),
     postalCode: Joi.string().trim().max(20).allow(null, "").optional(),
     status: Joi.string().valid("Active", "Inactive").optional(),
+    incentivePercentage: Joi.number().precision(2).min(0).max(100).optional().messages({
+      "number.base": "Incentive percentage must be a number",
+      "number.min": "Incentive percentage cannot be negative",
+      "number.max": "Incentive percentage cannot exceed 100",
+    }),
   })
     .min(1)
     .required()

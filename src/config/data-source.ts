@@ -2,7 +2,7 @@ import "reflect-metadata";
 import path from "path";
 import { DataSource } from "typeorm";
 import { env } from "./env";
-import { User, Merchant, Staff } from "../entities";
+import { User, Merchant, Staff, Transaction } from "../entities";
 
 export const AppDataSource = new DataSource({
   type: "mysql",
@@ -14,6 +14,6 @@ export const AppDataSource = new DataSource({
   timezone: "Z",
   synchronize: env.nodeEnv === "development",
   logging: env.nodeEnv === "development",
-  entities: [User, Merchant, Staff, path.join(__dirname, "../entities/**/*.{ts,js}")],
+  entities: [User, Merchant, Staff, Transaction, path.join(__dirname, "../entities/**/*.{ts,js}")],
   migrations: [path.join(__dirname, "../migrations/*.{ts,js}")],
 });

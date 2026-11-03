@@ -37,5 +37,6 @@ export const errorHandler = (
       statusCode === 500 && env.nodeEnv === "production"
         ? "Internal server error"
         : err.message,
+    ...(err instanceof AppError && err.details ? err.details : {}),
   });
 };

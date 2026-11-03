@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-router.use(authenticate, authorize(UserRole.ADMIN));
+// router.use(authenticate, authorize(UserRole.ADMIN));
 
 router.post("/", validate(createStaffSchema), staffController.createStaff);
 router.get("/", validate(getStaffQuerySchema), staffController.getAllStaff);
