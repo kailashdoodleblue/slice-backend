@@ -5,11 +5,13 @@ export interface CreateStaffInput {
   password: string;
   fullName: string;
   merchantId: string;
+  countryCode?: string;
   mobileNumber: string;
 }
 
 export interface UpdateStaffInput {
   fullName?: string;
+  countryCode?: string;
   mobileNumber?: string;
 }
 
@@ -68,6 +70,14 @@ export const createStaffSchema = Joi.object({
       "string.pattern.base": "Merchant ID must be a numeric string",
       "any.required": "Merchant ID is required",
     }),
+    countryCode: Joi.string()
+      .trim()
+      .max(10)
+      .default("+971")
+      .optional()
+      .messages({
+        "string.max": "Country code must be at most 10 characters long",
+      }),
     mobileNumber: Joi.string().trim().max(20).required().messages({
       "string.empty": "Mobile number is required",
       "any.required": "Mobile number is required",
@@ -83,6 +93,7 @@ export const updateStaffSchema = Joi.object({
   }).required(),
   body: Joi.object({
     fullName: Joi.string().trim().max(150).optional(),
+    countryCode: Joi.string().trim().max(10).optional(),
     mobileNumber: Joi.string().trim().max(20).optional(),
   })
     .min(1)
@@ -99,10 +110,14 @@ export const updateStaffStatusSchema = Joi.object({
     }),
   }).required(),
   body: Joi.object({
-    status: Joi.string().valid("Active", "Inactive").required().messages({
-      "any.only": "Status must be either 'Active' or 'Inactive'",
-      "any.required": "Status is required",
-    }),
+    status: Joi.string()
+      .trim()
+      .valid("Active", "Inactive")
+      .required()
+      .messages({
+        "any.only": "Status must be either 'Active' or 'Inactive'",
+        "any.required": "Status is required",
+      }),
   }).required(),
 });
 
@@ -110,6 +125,7 @@ export const staffIdParamSchema = Joi.object({
   params: Joi.object({
     id: Joi.string().pattern(/^\d+$/).required().messages({
       "string.pattern.base": "ID must be a numeric string",
+      "any.required": "Staff ID is required",
     }),
   }).required(),
 });

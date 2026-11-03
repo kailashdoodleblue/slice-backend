@@ -26,6 +26,9 @@ export class Staff extends BaseEntity {
   @Column({ type: "bigint" })
   merchantId: string;
 
+  @Column({ type: "varchar", length: 10, default: "+971" })
+  countryCode: string;
+
   @Column({ type: "varchar", length: 20, unique: true })
   mobileNumber: string;
 
