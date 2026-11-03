@@ -12,11 +12,12 @@ export class MerchantController {
     });
   };
 
-  getMerchants = async (_req: Request, res: Response) => {
-    const merchants = await merchantService.getAllMerchants();
+  getMerchants = async (req: Request, res: Response) => {
+    const { merchants, meta } = await merchantService.getAllMerchants(req.query);
     return sendResponse(res, {
       message: "Merchants retrieved successfully",
       data: merchants,
+      meta,
     });
   };
 
@@ -49,4 +50,3 @@ export class MerchantController {
 }
 
 export const merchantController = new MerchantController();
-

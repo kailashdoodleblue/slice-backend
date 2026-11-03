@@ -1,6 +1,12 @@
 import { Merchant } from "../../entities/merchant.entity";
+import { Staff } from "../../entities/staff.entity";
 import { AppError } from "../../utils/AppError";
-import { CreateMerchantInput, UpdateMerchantInput } from "./merchant.validation";
+import { getPaginationMeta } from "../../utils/pagination";
+import {
+  CreateMerchantInput,
+  UpdateMerchantInput,
+  GetMerchantsQuery,
+} from "./merchant.validation";
 
 export class MerchantService {
   async createMerchant(input: CreateMerchantInput): Promise<Merchant> {
@@ -29,13 +35,71 @@ export class MerchantService {
     return merchant.save();
   }
 
-  async getAllMerchants(): Promise<Merchant[]> {
-    return Merchant.find({
-      order: { id: "DESC" },
-    });
+  async getAllMerchants(query: GetMerchantsQuery = {}) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 7;
+    const skip = (page - 1) * limit;
+
+    const status = query.status ? query.status.toLowerCase() : "all";
+    const search = query.search ? query.search.trim() : undefined;
+
+    const qb = Merchant.createQueryBuilder("merchant");
+
+    // Filter by status: 'all' (default), 'active', or 'inactive'
+    if (status === "active") {
+      qb.andWhere("LOWER(merchant.status) = :status", { status: "active" });
+    } else if (status === "inactive") {
+      qb.andWhere("LOWER(merchant.status) = :status", { status: "inactive" });
+    }
+
+    // Filter by search: matches merchant name, registration code, location, or primary contact
+    if (search) {
+      qb.andWhere(
+        "(LOWER(merchant.businessName) LIKE :search OR " +
+          "LOWER(merchant.merchantCode) LIKE :search OR " +
+          "LOWER(merchant.registrationNumber) LIKE :search OR " +
+          "LOWER(merchant.city) LIKE :search OR " +
+          "LOWER(merchant.addressLine1) LIKE :search OR " +
+          "LOWER(merchant.countryMarket) LIKE :search OR " +
+          "LOWER(merchant.contactPerson) LIKE :search OR " +
+          "LOWER(merchant.businessEmail) LIKE :search OR " +
+          "LOWER(merchant.phoneNumber) LIKE :search)",
+        { search: `%${search.toLowerCase()}%` }
+      );
+    }
+
+    qb.orderBy("merchant.id", "DESC");
+    qb.skip(skip).take(limit);
+
+    const [merchants, total] = await qb.getManyAndCount();
+
+    // Query staff count per merchant for the paginated page items
+    const merchantIds = merchants.map((m) => m.id);
+    const staffCounts = merchantIds.length
+      ? await Staff.createQueryBuilder("staff")
+          .select("staff.merchantId", "merchantId")
+          .addSelect("COUNT(staff.staffId)", "count")
+          .where("staff.merchantId IN (:...merchantIds)", { merchantIds })
+          .groupBy("staff.merchantId")
+          .getRawMany()
+      : [];
+
+    const countMap = new Map(
+      staffCounts.map((item) => [String(item.merchantId), Number(item.count)])
+    );
+
+    const formattedMerchants = merchants.map((m) => ({
+      ...m,
+      staffCount: countMap.get(String(m.id)) || 0,
+    }));
+
+    return {
+      merchants: formattedMerchants,
+      meta: getPaginationMeta(total, page, limit),
+    };
   }
 
-  async getMerchantById(id: string): Promise<Merchant> {
+  async getMerchantById(id: string) {
     const merchant = await Merchant.findOne({
       where: { id },
       relations: ["staff"],
@@ -45,11 +109,17 @@ export class MerchantService {
       throw AppError.notFound("Merchant not found");
     }
 
-    return merchant;
+    return {
+      ...merchant,
+      staffCount: merchant.staff ? merchant.staff.length : 0,
+    };
   }
 
   async updateMerchant(id: string, input: UpdateMerchantInput): Promise<Merchant> {
-    const merchant = await this.getMerchantById(id);
+    const merchant = await Merchant.findOneBy({ id });
+    if (!merchant) {
+      throw AppError.notFound("Merchant not found");
+    }
 
     if (input.merchantCode && input.merchantCode !== merchant.merchantCode) {
       const existing = await Merchant.findOneBy({ merchantCode: input.merchantCode });
@@ -77,11 +147,13 @@ export class MerchantService {
   }
 
   async updateMerchantStatus(id: string, status: string): Promise<Merchant> {
-    const merchant = await this.getMerchantById(id);
+    const merchant = await Merchant.findOneBy({ id });
+    if (!merchant) {
+      throw AppError.notFound("Merchant not found");
+    }
     merchant.status = status;
     return merchant.save();
   }
 }
 
 export const merchantService = new MerchantService();
-

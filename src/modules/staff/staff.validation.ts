@@ -13,6 +13,41 @@ export interface UpdateStaffInput {
   mobileNumber?: string;
 }
 
+export interface GetStaffQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: "all" | "active" | "inactive";
+  merchantId?: string;
+}
+
+export const getStaffQuerySchema = Joi.object({
+  query: Joi.object({
+    status: Joi.string()
+      .trim()
+      .lowercase()
+      .valid("all", "active", "inactive")
+      .default("all")
+      .optional()
+      .messages({
+        "any.only": "Status must be 'all', 'active', or 'inactive'",
+      }),
+    search: Joi.string().trim().max(100).allow("").optional(),
+    merchantId: Joi.string().pattern(/^\d+$/).optional().messages({
+      "string.pattern.base": "Merchant ID must be a numeric string",
+    }),
+    page: Joi.number().integer().min(1).default(1).optional().messages({
+      "number.base": "Page must be a number",
+      "number.min": "Page must be at least 1",
+    }),
+    limit: Joi.number().integer().min(1).max(50).default(7).optional().messages({
+      "number.base": "Limit must be a number",
+      "number.min": "Limit must be at least 1",
+      "number.max": "Limit must be at most 50",
+    }),
+  }).optional(),
+});
+
 export const createStaffSchema = Joi.object({
   body: Joi.object({
     email: Joi.string().trim().email().max(150).required().messages({

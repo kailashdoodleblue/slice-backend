@@ -4,7 +4,7 @@ export interface ApiResponseOptions<T = unknown> {
   statusCode?: number;
   message?: string;
   data?: T;
-  meta?: Record<string, unknown>;
+  meta?: object;
 }
 
 export const sendResponse = <T>(

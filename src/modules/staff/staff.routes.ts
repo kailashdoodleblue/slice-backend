@@ -8,6 +8,7 @@ import {
   updateStaffSchema,
   updateStaffStatusSchema,
   staffIdParamSchema,
+  getStaffQuerySchema,
 } from "./staff.validation";
 
 const router = Router();
@@ -15,7 +16,7 @@ const router = Router();
 router.use(authenticate, authorize(UserRole.ADMIN));
 
 router.post("/", validate(createStaffSchema), staffController.createStaff);
-router.get("/", staffController.getAllStaff);
+router.get("/", validate(getStaffQuerySchema), staffController.getAllStaff);
 router.get("/:id", validate(staffIdParamSchema), staffController.getStaffById);
 router.put("/:id", validate(updateStaffSchema), staffController.updateStaff);
 router.patch(
@@ -25,4 +26,3 @@ router.patch(
 );
 
 export default router;
-

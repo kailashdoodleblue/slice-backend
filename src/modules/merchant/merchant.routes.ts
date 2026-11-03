@@ -8,6 +8,7 @@ import {
   updateMerchantSchema,
   updateMerchantStatusSchema,
   merchantIdParamSchema,
+  getMerchantsQuerySchema,
 } from "./merchant.validation";
 
 const router = Router();
@@ -15,7 +16,7 @@ const router = Router();
 router.use(authenticate, authorize(UserRole.ADMIN));
 
 router.post("/", validate(createMerchantSchema), merchantController.createMerchant);
-router.get("/", merchantController.getMerchants);
+router.get("/", validate(getMerchantsQuerySchema), merchantController.getMerchants);
 router.get("/:id", validate(merchantIdParamSchema), merchantController.getMerchantById);
 router.put("/:id", validate(updateMerchantSchema), merchantController.updateMerchant);
 router.patch(
@@ -25,4 +26,3 @@ router.patch(
 );
 
 export default router;
-

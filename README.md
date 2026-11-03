@@ -65,6 +65,8 @@ src/
 ├── config/
 │   ├── data-source.ts                 # TypeORM DataSource & Entity configuration
 │   └── env.ts                         # Validated environment configuration
+├── constants/
+│   └── index.ts                       # Domain enums (UserRole, AccountStatus, etc.)
 ├── entities/                          # Centralized database entities (camelCase)
 │   ├── index.ts                       # Entity barrel export
 │   ├── user.entity.ts                 # Common Users table (Admin & Staff)
@@ -87,8 +89,6 @@ src/
 ├── seed/
 │   ├── admin.seed.ts                  # Secure admin seeder function
 │   └── run-seed.ts                    # Standalone seeding script
-├── types/
-│   └── express.d.ts                   # Express Request augmentation (req.user)
 ├── utils/
 │   ├── AppError.ts                    # Operational error factory
 │   └── response.ts                    # Standardized API response helper
@@ -123,10 +123,47 @@ Guards are applied directly on routes:
 | Method | Endpoint | Description | Access |
 |---|---|---|---|
 | `POST` | `/api/merchants` | Create new merchant | Admin |
-| `GET` | `/api/merchants` | List all merchants | Admin |
-| `GET` | `/api/merchants/:id` | Get merchant details | Admin |
+| `GET` | `/api/merchants` | List merchants with search, filter, pagination & staffCount | Admin |
+| `GET` | `/api/merchants/:id` | Get merchant details with staff list & staffCount | Admin |
 | `PUT` | `/api/merchants/:id` | Update merchant details | Admin |
 | `PATCH` | `/api/merchants/:id/status`| Update merchant status (`Active`/`Inactive`) | Admin |
+
+#### `GET /api/merchants` Query Parameters:
+| Param | Type | Required | Validation & Description |
+|---|---|---|---|
+| `status` | string | No | `all`, `active`, or `inactive`. Default `all`. |
+| `search` | string | No | Matches merchant name, registration code, location (city/address/country), or primary contact (name/email/phone). |
+| `page` | number | No | Whole number, at least 1. Default `1`. |
+| `limit` | number | No | Whole number, 1 to 50. Default `7`. |
+
+**Response Format:**
+```json
+{
+  "success": true,
+  "message": "Merchants retrieved successfully",
+  "data": [
+    {
+      "id": "1",
+      "merchantCode": "MERC_001",
+      "businessName": "Acme Supermarket",
+      "businessEmail": "contact@acme.com",
+      "contactPerson": "Alice Smith",
+      "city": "New York",
+      "status": "Active",
+      "staffCount": 4,
+      "createdAt": "2026-11-01T10:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 7,
+    "total": 1,
+    "totalPages": 1,
+    "hasNextPage": false,
+    "hasPrevPage": false
+  }
+}
+```
 
 ### 3. Staff Management (`/api/staff`)
 | Method | Endpoint | Description | Access |
