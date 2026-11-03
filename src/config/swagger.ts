@@ -204,7 +204,6 @@ export const swaggerSpec = {
           postalCode: { type: "string", maxLength: 20, nullable: true },
           status: { type: "string", enum: ["Active", "Inactive"], default: "Active" },
           incentivePercentage: { type: "number", minimum: 0, maximum: 100, default: 0, example: 5.5 },
-          incentivePercentage: { type: "number", minimum: 0, maximum: 100, default: 0, example: 5.5 },
         },
       },
       UpdateMerchantRequest: {
