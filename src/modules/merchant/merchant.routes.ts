@@ -13,12 +13,15 @@ import {
 
 const router = Router();
 
+// Public endpoints (no authentication required)
+router.get("/dropdown", merchantController.getMerchantDropdown);
+router.get("/locations", merchantController.getLocationDropdown);
+
+// Admin-only merchant management
 router.use(authenticate, authorize(UserRole.ADMIN));
 
 router.post("/", validate(createMerchantSchema), merchantController.createMerchant);
 router.get("/", validate(getMerchantsQuerySchema), merchantController.getMerchants);
-router.get("/dropdown", merchantController.getMerchantDropdown);
-router.get("/locations", merchantController.getLocationDropdown);
 router.get("/:id", validate(merchantIdParamSchema), merchantController.getMerchantById);
 router.put("/:id", validate(updateMerchantSchema), merchantController.updateMerchant);
 router.patch(

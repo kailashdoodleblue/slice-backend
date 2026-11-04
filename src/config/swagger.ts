@@ -885,6 +885,46 @@ export const swaggerSpec = {
     },
 
     // ===== Merchants =====
+    "/merchants/dropdown": {
+      get: {
+        tags: ["Merchants"],
+        summary: "Get merchant dropdown list (Public)",
+        description: "Returns simplified list of merchants (id, businessName) for dropdown selection. No authentication required.",
+        responses: {
+          "200": ok(
+            "Merchant dropdown list",
+            {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: { type: "string", example: "1" },
+                  businessName: { type: "string", example: "Slice Electronics LLC" },
+                },
+              },
+            },
+            "Merchant dropdown list retrieved successfully"
+          ),
+        },
+      },
+    },
+    "/merchants/locations": {
+      get: {
+        tags: ["Merchants"],
+        summary: "Get distinct merchant locations/cities (Public)",
+        description: "Returns distinct list of cities for location filtering. No authentication required.",
+        responses: {
+          "200": ok(
+            "Location list",
+            {
+              type: "array",
+              items: { type: "string", example: "Dubai" },
+            },
+            "Locations retrieved successfully"
+          ),
+        },
+      },
+    },
     "/merchants": {
       get: {
         tags: ["Merchants"],

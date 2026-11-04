@@ -94,21 +94,12 @@ export class StaffService {
         fullName: savedStaff.fullName,
         countryCode: savedStaff.countryCode,
         mobileNumber: savedStaff.mobileNumber,
-        merchantId: savedStaff.merchantId,
-        createdAt: savedStaff.createdAt,
         user: {
           id: savedUser.id,
           name: savedUser.name,
           email: savedUser.email,
-          role: savedUser.role,
-          status: savedUser.status,
-          createdAt: savedUser.createdAt,
-        },
-        merchant: {
-          id: merchant.id,
-          merchantCode: merchant.merchantCode,
-          businessName: merchant.businessName,
-        },
+          role: savedUser.role
+        }
       };
     });
   }
