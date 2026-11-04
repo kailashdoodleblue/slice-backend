@@ -4,7 +4,6 @@ import { validate } from "../../middlewares/validate.middleware";
 import { authenticate, authorize } from "../../middlewares/auth.middleware";
 import { UserRole } from "../../constants";
 import {
-  createStaffSchema,
   updateStaffSchema,
   updateMyProfileSchema,
   changePasswordSchema,
@@ -15,7 +14,8 @@ import {
 
 const router = Router();
 
-// router.use(authenticate, authorize(UserRole.ADMIN));
+// Admin-only staff management
+router.use(authenticate, authorize(UserRole.ADMIN));
 
 router.get("/me/profile", authenticate, authorize(UserRole.STAFF), staffController.getMyProfile);
 router.put(
@@ -32,7 +32,6 @@ router.patch(
   validate(changePasswordSchema),
   staffController.changePassword
 );
-router.post("/", validate(createStaffSchema), staffController.createStaff);
 router.get("/", validate(getStaffQuerySchema), staffController.getAllStaff);
 router.get("/:id", validate(staffIdParamSchema), staffController.getStaffById);
 router.put("/:id", validate(updateStaffSchema), staffController.updateStaff);

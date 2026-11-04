@@ -3,15 +3,6 @@ import { staffService } from "./staff.service";
 import { sendResponse } from "../../utils/response";
 
 export class StaffController {
-  createStaff = async (req: Request, res: Response) => {
-    const staff = await staffService.createStaff(req.body);
-    return sendResponse(res, {
-      statusCode: 201,
-      message: "Staff created successfully",
-      data: staff,
-    });
-  };
-
   getAllStaff = async (req: Request, res: Response) => {
     const { staff, meta } = await staffService.getAllStaff(req.query);
     return sendResponse(res, {

@@ -138,6 +138,7 @@ export class MerchantService {
     if (input.businessName !== undefined) merchant.businessName = input.businessName;
     if (input.businessEmail !== undefined) merchant.businessEmail = input.businessEmail;
     if (input.contactPerson !== undefined) merchant.contactPerson = input.contactPerson || null;
+    if (input.countryCode !== undefined) merchant.countryCode = input.countryCode || null;
     if (input.phoneNumber !== undefined) merchant.phoneNumber = input.phoneNumber || null;
     if (input.businessType !== undefined) merchant.businessType = input.businessType || null;
     if (input.countryMarket !== undefined) merchant.countryMarket = input.countryMarket || null;
@@ -190,7 +191,7 @@ export class MerchantService {
     return count;
   }
 
-   async getMerchantDropdown(): Promise<{ id: string; businessName: string }[]> {
+  async getMerchantDropdown(): Promise<{ id: string; businessName: string }[]> {
     return Merchant.find({
       select: {
         id: true,
@@ -212,9 +213,6 @@ export class MerchantService {
 
     return records.map((r: { city: string }) => r.city);
   }
-
-
-
 }
 
 export const merchantService = new MerchantService();

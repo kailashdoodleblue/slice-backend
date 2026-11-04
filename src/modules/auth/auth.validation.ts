@@ -3,6 +3,7 @@ import Joi from "joi";
 export interface LoginInput {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface ForgotPasswordInput {
@@ -26,6 +27,8 @@ export const loginSchema = Joi.object({
       "string.empty": "Password is required",
       "any.required": "Password is required",
     }),
+    rememberMe: Joi.boolean().optional(),
+    remindMe: Joi.boolean().optional(),
   }).required(),
 });
 

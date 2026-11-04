@@ -6,6 +6,8 @@ import { env } from "../../config/env";
 import { AppError } from "../../utils/AppError";
 import { sendEmail } from "../../utils/mailer";
 import { getPasswordResetTemplate } from "../../templates/email";
+import { staffService } from "../staff/staff.service";
+import { CreateStaffInput } from "../staff/staff.validation";
 import {
   LoginInput,
   ForgotPasswordInput,
@@ -13,7 +15,7 @@ import {
 } from "./auth.validation";
 
 export class AuthService {
-  async login(input: LoginInput) {
+  private async loginWithRole(input: LoginInput, requiredRole?: UserRole) {
     const user = await User.createQueryBuilder("user")
       .where("user.email = :email", { email: input.email.trim().toLowerCase() })
       .addSelect("user.password")
@@ -25,6 +27,11 @@ export class AuthService {
       throw AppError.unauthorized("Invalid email or password");
     }
 
+    if (requiredRole && user.role !== requiredRole) {
+      const roleLabel = requiredRole === UserRole.ADMIN ? "administrator" : "staff";
+      throw AppError.forbidden(`Access denied: Not a ${roleLabel} account`);
+    }
+
     if (user.status !== UserStatus.ACTIVE) {
       throw AppError.forbidden("Account is inactive. Please contact support.");
     }
@@ -34,6 +41,9 @@ export class AuthService {
       throw AppError.unauthorized("Invalid email or password");
     }
 
+    const isRememberMe = Boolean(input.rememberMe);
+    const expiresIn = isRememberMe ? "7d" : env.jwt.expiresIn;
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -41,15 +51,47 @@ export class AuthService {
         role: user.role,
       },
       env.jwt.secret,
-      { expiresIn: env.jwt.expiresIn as any }
+      { expiresIn: expiresIn as any }
     );
 
-    const { password: _, ...userWithoutPassword } = user;
+    const name = user.name || user.staff?.fullName || (user.role === UserRole.ADMIN ? "Admin" : "");
 
     return {
       token,
-      user: userWithoutPassword,
+      user: {
+        email: user.email,
+        name,
+      },
     };
+  }
+
+  async adminLogin(input: LoginInput) {
+    return this.loginWithRole(input, UserRole.ADMIN);
+  }
+
+  async staffLogin(input: LoginInput) {
+    return this.loginWithRole(input, UserRole.STAFF);
+  }
+
+  async staffRegister(input: CreateStaffInput) {
+    const staffData = await staffService.createStaff(input);
+    const token = jwt.sign(
+      {
+        id: staffData.user.id,
+        email: staffData.user.email,
+        role: staffData.user.role,
+      },
+      env.jwt.secret,
+      { expiresIn: env.jwt.expiresIn as any }
+    );
+    return {
+      token,
+      ...staffData,
+    };
+  }
+
+  async login(input: LoginInput) {
+    return this.loginWithRole(input);
   }
 
   async getProfile(userId: string) {

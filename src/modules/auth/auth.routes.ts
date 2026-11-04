@@ -7,10 +7,22 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from "./auth.validation";
+import { createStaffSchema } from "../staff/staff.validation";
 
 const router = Router();
 
-router.post("/login", validate(loginSchema), authController.login);
+// Separate Admin and Staff logins
+router.post("/admin/login", validate(loginSchema), authController.adminLogin);
+router.post("/staff/login", validate(loginSchema), authController.staffLogin);
+
+// Staff registration
+router.post(
+  "/staff/register",
+  validate(createStaffSchema),
+  authController.staffRegister
+);
+
+// Password recovery
 router.post(
   "/forgot-password",
   validate(forgotPasswordSchema),
@@ -21,6 +33,8 @@ router.post(
   validate(resetPasswordSchema),
   authController.resetPassword
 );
+
+// Authenticated session routes
 router.get("/me", authenticate, authController.me);
 router.post("/logout", authenticate, authController.logout);
 

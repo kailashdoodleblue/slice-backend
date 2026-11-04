@@ -13,6 +13,7 @@ const start = async () => {
 
     const server = app.listen(env.port, () => {
       console.log(`🚀 Server running on http://localhost:${env.port}`);
+      console.log(`📚 Swagger docs: http://localhost:${env.port}/api-docs`);
       console.log(`❤️  Health check: http://localhost:${env.port}/api/health`);
     });
 

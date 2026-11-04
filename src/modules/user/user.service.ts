@@ -32,6 +32,7 @@ export class UserService {
     const hashedPassword = await bcrypt.hash(input.password || "DefaultPassword123!", 10);
 
     const user = User.create({
+      name: input.name ? input.name.trim() : null,
       email: input.email.trim().toLowerCase(),
       password: hashedPassword,
       role: input.role || UserRole.STAFF,
@@ -51,6 +52,7 @@ export class UserService {
       user.email = input.email.trim().toLowerCase();
     }
 
+    if (input.name !== undefined) user.name = input.name ? input.name.trim() : null;
     if (input.status !== undefined) user.status = input.status;
 
     return user.save();
@@ -58,7 +60,7 @@ export class UserService {
 
   async deleteUser(id: string): Promise<void> {
     const result = await User.delete(id);
-    if (!result.affected) {
+    if (result.affected === 0) {
       throw AppError.notFound("User not found");
     }
   }
