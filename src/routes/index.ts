@@ -5,6 +5,7 @@ import merchantRoutes from "../modules/merchant/merchant.routes";
 import staffRoutes from "../modules/staff/staff.routes";
 import userRoutes from "../modules/user/user.routes";
 import staffDashboardRoutes from "../modules/staff-dashboard/staff-dashboard.routes";
+import faqRoutes from "../modules/faq/faq.routes";
 import transactionRoutes from "../modules/transaction/transaction.routes";
 import adminRoutes from "../modules/admin/admin.routes";
 
@@ -17,6 +18,7 @@ router.use("/merchants", merchantRoutes);
 router.use("/staff", staffRoutes);
 router.use("/users", userRoutes);
 router.use("/staff-dashboard", staffDashboardRoutes);
+router.use("/faqs", faqRoutes);
 router.use("/transactions", transactionRoutes);
 
 export default router;
