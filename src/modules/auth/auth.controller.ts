@@ -3,7 +3,6 @@ import { authService } from "./auth.service";
 import { sendResponse } from "../../utils/response";
 
 export class AuthController {
-
   adminLogin = async (req: Request, res: Response) => {
     const result = await authService.adminLogin(req.body);
     return sendResponse(res, {
@@ -16,6 +15,15 @@ export class AuthController {
     const result = await authService.staffLogin(req.body);
     return sendResponse(res, {
       message: "Staff login successful",
+      data: result,
+    });
+  };
+
+  staffRegister = async (req: Request, res: Response) => {
+    const result = await authService.staffRegister(req.body);
+    return sendResponse(res, {
+      statusCode: 201,
+      message: "Staff registered successfully",
       data: result,
     });
   };

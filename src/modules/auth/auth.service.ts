@@ -6,6 +6,8 @@ import { env } from "../../config/env";
 import { AppError } from "../../utils/AppError";
 import { sendEmail } from "../../utils/mailer";
 import { getPasswordResetTemplate } from "../../templates/email";
+import { staffService } from "../staff/staff.service";
+import { CreateStaffInput } from "../staff/staff.validation";
 import {
   LoginInput,
   ForgotPasswordInput,
@@ -69,6 +71,23 @@ export class AuthService {
 
   async staffLogin(input: LoginInput) {
     return this.loginWithRole(input, UserRole.STAFF);
+  }
+
+  async staffRegister(input: CreateStaffInput) {
+    const staffData = await staffService.createStaff(input);
+    const token = jwt.sign(
+      {
+        id: staffData.user.id,
+        email: staffData.user.email,
+        role: staffData.user.role,
+      },
+      env.jwt.secret,
+      { expiresIn: env.jwt.expiresIn as any }
+    );
+    return {
+      token,
+      ...staffData,
+    };
   }
 
   async login(input: LoginInput) {

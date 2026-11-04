@@ -7,12 +7,20 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from "./auth.validation";
+import { createStaffSchema } from "../staff/staff.validation";
 
 const router = Router();
 
 // Separate Admin and Staff logins
 router.post("/admin/login", validate(loginSchema), authController.adminLogin);
 router.post("/staff/login", validate(loginSchema), authController.staffLogin);
+
+// Staff registration
+router.post(
+  "/staff/register",
+  validate(createStaffSchema),
+  authController.staffRegister
+);
 
 // Password recovery
 router.post(

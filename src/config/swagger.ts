@@ -535,6 +535,20 @@ export const swaggerSpec = {
         },
       },
     },
+    "/auth/staff/register": {
+      post: {
+        tags: ["Auth"],
+        summary: "Staff self-registration",
+        description: "Public endpoint to register a new staff member under an active merchant. Returns JWT token and staff profile.",
+        requestBody: body("CreateStaffRequest"),
+        responses: {
+          "201": ok("Staff registered", ref("Staff"), "Staff registered successfully"),
+          "400": errRes("Validation failed or merchant inactive", "ValidationError"),
+          "404": errRes("Merchant not found"),
+          "409": errRes("Email or mobile number already registered"),
+        },
+      },
+    },
     "/auth/staff/login": {
       post: {
         tags: ["Auth"],
@@ -946,19 +960,6 @@ export const swaggerSpec = {
         responses: {
           "200": ok("Staff list", { type: "array", items: ref("Staff") }, "Staff list retrieved successfully"),
           ...authErrors,
-        },
-      },
-      post: {
-        tags: ["Staff"],
-        summary: "Create a staff member (also creates their login user)",
-        security: secured,
-        requestBody: body("CreateStaffRequest"),
-        responses: {
-          "201": ok("Staff created", ref("Staff"), "Staff created successfully"),
-          "400": errRes("Validation failed or merchant inactive", "ValidationError"),
-          ...authErrors,
-          "404": errRes("Merchant not found"),
-          "409": errRes("Email or mobile number already registered"),
         },
       },
     },
