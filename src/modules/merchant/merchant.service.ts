@@ -9,17 +9,30 @@ import {
 } from "./merchant.validation";
 
 export class MerchantService {
-  async createMerchant(input: CreateMerchantInput): Promise<Merchant> {
-    const existing = await Merchant.findOneBy({ merchantCode: input.merchantCode });
-    if (existing) {
-      throw AppError.conflict("Merchant with this code already exists");
+  private async generateMerchantCode(): Promise<string> {
+    const lastMerchant = await Merchant.findOne({
+      where: {},
+      order: { id: "DESC" },
+    });
+
+    if (!lastMerchant || !lastMerchant.merchantCode) {
+      return "MRC-001";
     }
 
+    const match = lastMerchant.merchantCode.match(/\d+$/);
+    const nextNumber = match ? parseInt(match[0], 10) + 1 : 1;
+    return `MRC-${nextNumber.toString().padStart(3, "0")}`;
+  }
+
+  async createMerchant(input: CreateMerchantInput): Promise<Merchant> {
+    const merchantCode = await this.generateMerchantCode();
+
     const merchant = Merchant.create({
-      merchantCode: input.merchantCode,
+      merchantCode,
       businessName: input.businessName,
       businessEmail: input.businessEmail,
       contactPerson: input.contactPerson || null,
+      countryCode: input.countryCode || null,
       phoneNumber: input.phoneNumber || null,
       businessType: input.businessType || null,
       countryMarket: input.countryMarket || null,
@@ -122,14 +135,6 @@ export class MerchantService {
       throw AppError.notFound("Merchant not found");
     }
 
-    if (input.merchantCode && input.merchantCode !== merchant.merchantCode) {
-      const existing = await Merchant.findOneBy({ merchantCode: input.merchantCode });
-      if (existing) {
-        throw AppError.conflict("Merchant with this code already exists");
-      }
-      merchant.merchantCode = input.merchantCode;
-    }
-
     if (input.businessName !== undefined) merchant.businessName = input.businessName;
     if (input.businessEmail !== undefined) merchant.businessEmail = input.businessEmail;
     if (input.contactPerson !== undefined) merchant.contactPerson = input.contactPerson || null;
@@ -156,6 +161,60 @@ export class MerchantService {
     merchant.status = status;
     return merchant.save();
   }
+
+  async getTotalMerchantCount(): Promise<number> {
+    const count = await Merchant.count();
+    if (count === 0) {
+      return 0;
+    }
+    return count;
+  }
+
+  async getTotalActiveMerchant(): Promise<number> {
+    const count = await Merchant.count({
+      where: { status: "Active" },
+    });
+    if (count === 0) {
+      return 0;
+    }
+    return count;
+  }
+
+  async getTotalInActiveMerchant(): Promise<number> {
+    const count = await Merchant.count({
+      where: { status: "Inactive" },
+    });
+    if (count === 0) {
+      return 0;
+    }
+    return count;
+  }
+
+   async getMerchantDropdown(): Promise<{ id: string; businessName: string }[]> {
+    return Merchant.find({
+      select: {
+        id: true,
+        businessName: true,
+      },
+      order: {
+        businessName: "ASC",
+      },
+    });
+  }
+
+  async getLocationDropdown(): Promise<string[]> {
+    const records = await Merchant.createQueryBuilder("merchant")
+      .select("DISTINCT merchant.city", "city")
+      .where("merchant.city IS NOT NULL")
+      .andWhere("merchant.city != ''")
+      .orderBy("merchant.city", "ASC")
+      .getRawMany();
+
+    return records.map((r: { city: string }) => r.city);
+  }
+
+
+
 }
 
 export const merchantService = new MerchantService();
