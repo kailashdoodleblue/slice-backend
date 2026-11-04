@@ -65,10 +65,10 @@ const isDuplicateEntryError = (err: any): boolean =>
 
 export class TransactionService {
   async submitTransaction(userId: string, input: SubmitTransactionInput) {
-    console.log("IN THIS FUNCTION ",userId)
+    console.log("IN THIS FUNCTION ", userId);
     // 1. Resolve the staff profile of the logged-in user
     const staff = await Staff.findOneBy({ userId });
-    console.log("Staff:", staff)
+    console.log("Staff:", staff);
     if (!staff) {
       throw AppError.forbidden("Only staff members can submit transactions");
     }
@@ -152,34 +152,34 @@ export class TransactionService {
     const month = query.month ? query.month.trim() : undefined;
 
     const qb = Transaction.createQueryBuilder("t").where(
-      "t.staff_id = :staffId",
+      "t.staffId = :staffId",
       { staffId: staff.staffId }
     );
 
     if (month) {
       const { start, end } = monthRange(month);
-      qb.andWhere("t.created_at >= :start AND t.created_at < :end", {
+      qb.andWhere("t.createdAt >= :start AND t.createdAt < :end", {
         start,
         end,
       });
     }
 
     if (status === "approved") {
-      qb.andWhere("t.approval_status = 1");
+      qb.andWhere("t.approvalStatus = 1");
     } else if (status === "pending") {
-      qb.andWhere("t.approval_status = 0 AND t.remarks IS NULL");
+      qb.andWhere("t.approvalStatus = 0 AND t.remarks IS NULL");
     } else if (status === "rejected") {
-      qb.andWhere("t.approval_status = 0 AND t.remarks IS NOT NULL");
+      qb.andWhere("t.approvalStatus = 0 AND t.remarks IS NOT NULL");
     }
 
     if (search) {
       qb.andWhere(
-        "(LOWER(t.authorization_code) LIKE :search OR LOWER(t.ref_id) LIKE :search)",
+        "(LOWER(t.authorizationCode) LIKE :search OR LOWER(t.refId) LIKE :search)",
         { search: `%${search.toLowerCase()}%` }
       );
     }
 
-    qb.orderBy("t.created_at", "DESC").addOrderBy("t.id", "DESC");
+    qb.orderBy("t.createdAt", "DESC").addOrderBy("t.id", "DESC");
     qb.skip(skip).take(limit);
 
     const [rows, total] = await qb.getManyAndCount();
@@ -224,7 +224,7 @@ export class TransactionService {
     const existing = await Transaction.findOneBy({ authorizationCode: authCode });
     if (!existing) return;
 
-    throw AppError.conflict("Transaction already submitted", {
+    throw AppError.conflict("Transaction already claimed", {
       code: "TRANSACTION_ALREADY_CLAIMED",
       errors: { authCode: ["This Approval code has already been claimed."] },
       existingTransaction: {
@@ -238,4 +238,3 @@ export class TransactionService {
 }
 
 export const transactionService = new TransactionService();
-

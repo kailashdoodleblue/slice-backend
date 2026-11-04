@@ -1,14 +1,13 @@
+import { AppError } from "../../utils/AppError";
 import { Staff } from "../../entities/staff.entity";
 import { Transaction } from "../../entities/transaction.entity";
-import { AppError } from "../../utils/AppError";
-import { getTransactionStatus } from "../transaction/transaction.service";
-import { StaffDashboardQuery } from "./staff-dashboard.validation";
+import {
+  getTransactionStatus,
+  calculateIncentive,
+} from "../transaction/transaction.service";
 
 const CURRENCY = "AED";
-const MINIMUM_APPROVED_COUNT = 10;
-const TARGET = 100;
-const RECENT_LIMIT = 3;
-// Business timezone: GST (UTC+4). Month boundaries and cutoff follow it.
+const RECENT_LIMIT = 5;
 const GST_OFFSET_MS = 4 * 60 * 60 * 1000;
 
 const MONTH_NAMES = [
@@ -16,71 +15,78 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-const monthNameGst = (date: Date): string => {
-  const gst = new Date(date.getTime() + GST_OFFSET_MS);
-  return MONTH_NAMES[gst.getUTCMonth()];
-};
-
-/** "YYYY-MM" for the current month in GST */
 const currentMonthGst = (): string => {
   const d = new Date(Date.now() + GST_OFFSET_MS);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 };
 
-/** [start, end) of the month in GST expressed as UTC dates, plus the 23:59 GST cutoff */
+const monthNameGst = (date: Date): string => {
+  const gst = new Date(date.getTime() + GST_OFFSET_MS);
+  return MONTH_NAMES[gst.getUTCMonth()];
+};
+
 const monthRange = (month: string) => {
   const [y, m] = month.split("-").map(Number);
   const start = new Date(Date.UTC(y, m - 1, 1) - GST_OFFSET_MS);
   const end = new Date(Date.UTC(y, m, 1) - GST_OFFSET_MS);
-  const cutoffAt = new Date(end.getTime() - 60 * 1000);
-  return { start, end, cutoffAt };
+  return { start, end };
 };
 
 export class StaffDashboardService {
-  async getDashboard(userId: string, query: StaffDashboardQuery) {
-    const staff = await Staff.findOneBy({ userId });
+  async getDashboard(userId: string, requestedMonth?: string) {
+    const staff = await Staff.findOne({
+      where: { userId },
+      relations: ["merchant"],
+    });
+
     if (!staff) {
-      throw AppError.forbidden("Only staff members can view the dashboard");
+      throw AppError.forbidden("Only staff members can access the dashboard");
     }
 
-    const incentiveMonth = query.incentiveMonth || currentMonthGst();
-    const performanceMonth = query.performanceMonth || currentMonthGst();
+    const curMonth = currentMonthGst();
+    const month = requestedMonth ?? curMonth;
+    const isPastMonth = month < curMonth;
 
-    const [incentive, performance] = await Promise.all([
-      this.getStats(staff.staffId, incentiveMonth),
-      incentiveMonth === performanceMonth
-        ? undefined
-        : this.getStats(staff.staffId, performanceMonth),
+    const [monthStats, recentRows] = await Promise.all([
+      this.getStats(staff.staffId, month),
+      this.getRecentTransactions(userId),
     ]);
-    const perf = performance ?? incentive;
 
-    // Approved count against the monthly minimum, capped at the target
-    const progress = Math.min(
-      TARGET,
-      Math.round((perf.approvedCount / MINIMUM_APPROVED_COUNT) * TARGET)
-    );
+    const percentage = staff.merchant
+      ? Number(staff.merchant.incentivePercentage)
+      : 0;
 
     return {
-      month: incentiveMonth,
-      currency: CURRENCY,
-      cutoffAt: monthRange(incentiveMonth).cutoffAt.toISOString(),
-      incentive: {
-        amount: incentive.incentiveAmount,
-        approvedCount: incentive.approvedCount,
-        pendingCount: incentive.pendingCount,
-        minimumApprovedCount: MINIMUM_APPROVED_COUNT,
+      staff: {
+        staffId: staff.staffId,
+        staffName: staff.fullName,
+        incentivePercentage: percentage,
       },
-      performance: {
-        transactionVolume: perf.volume,
-        transactionsSubmitted: perf.submitted,
-        targetProgress: { current: progress, target: TARGET },
+      merchant: staff.merchant
+        ? {
+            id: staff.merchant.id,
+            businessName: staff.merchant.businessName,
+          }
+        : null,
+      month: {
+        key: month,
+        isPastMonth,
       },
+      stats: {
+        currency: CURRENCY,
+        incentiveAmount: monthStats.incentiveAmount,
+        volume: monthStats.volume,
+        submitted: monthStats.submitted,
+        approvedCount: monthStats.approvedCount,
+        pendingCount: monthStats.pendingCount,
+      },
+      recentTransactions: recentRows,
     };
   }
 
   /**
    * Aggregates one staff member's transactions for a month.
-   * - approved: approval_status = 1
+   * - approved: approvalStatus = 1
    * - pending:  not approved and no remarks
    * - rejected: not approved with remarks (excluded from incentive/volume/submitted)
    */
@@ -89,24 +95,24 @@ export class StaffDashboardService {
 
     const raw = await Transaction.createQueryBuilder("t")
       .select(
-        "COALESCE(SUM(CASE WHEN t.approval_status = 1 OR t.remarks IS NULL THEN t.incentive ELSE 0 END), 0)",
+        "COALESCE(SUM(CASE WHEN t.approvalStatus = 1 OR t.remarks IS NULL THEN t.incentive ELSE 0 END), 0)",
         "incentiveAmount"
       )
-      .addSelect("COALESCE(SUM(t.approval_status = 1), 0)", "approvedCount")
+      .addSelect("COALESCE(SUM(t.approvalStatus = 1), 0)", "approvedCount")
       .addSelect(
-        "COALESCE(SUM(t.approval_status = 0 AND t.remarks IS NULL), 0)",
+        "COALESCE(SUM(t.approvalStatus = 0 AND t.remarks IS NULL), 0)",
         "pendingCount"
       )
       .addSelect(
-        "COALESCE(SUM(CASE WHEN t.approval_status = 1 OR t.remarks IS NULL THEN t.transaction_amount ELSE 0 END), 0)",
+        "COALESCE(SUM(CASE WHEN t.approvalStatus = 1 OR t.remarks IS NULL THEN t.transactionAmount ELSE 0 END), 0)",
         "volume"
       )
       .addSelect(
-        "COALESCE(SUM(t.approval_status = 1 OR t.remarks IS NULL), 0)",
+        "COALESCE(SUM(t.approvalStatus = 1 OR t.remarks IS NULL), 0)",
         "submitted"
       )
-      .where("t.staff_id = :staffId", { staffId })
-      .andWhere("t.created_at >= :start AND t.created_at < :end", { start, end })
+      .where("t.staffId = :staffId", { staffId })
+      .andWhere("t.createdAt >= :start AND t.createdAt < :end", { start, end })
       .getRawOne();
 
     return {
@@ -155,4 +161,3 @@ export class StaffDashboardService {
 }
 
 export const staffDashboardService = new StaffDashboardService();
-
