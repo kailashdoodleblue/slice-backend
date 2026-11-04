@@ -24,6 +24,8 @@ export interface DashboardStats {
 
 export interface VolumeDataPoint {
   month: string;
+  shortMonth: string;
+  fullMonth: string;
   year: number;
   monthKey: string;
   approved: number;
@@ -68,17 +70,23 @@ export interface IncentiveDistributionResponse {
     amount: number;
     percentage: number;
     formatted: string;
+    color: string;
   }[];
 }
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+const UI_MONTH_NAMES = [
+  "Jan", "Feb", "March", "Apr", "May", "June",
+  "July", "Aug", "Sept", "Oct", "Nov", "Dec",
 ];
 
 const FULL_MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
+  "July", "August", "September", "October", "November", "December",
 ];
 
 function parseTargetDate(monthStr?: string, yearNum?: number): { year: number; month: number } {
@@ -188,7 +196,7 @@ export class AdminService {
     const { year: targetYear, month: targetMonth } = parseTargetDate(query.month, query.year);
 
     // Build the 6-month array ending at targetYear / targetMonth
-    const monthsList: { key: string; month: string; year: number }[] = [];
+    const monthsList: { key: string; shortMonth: string; year: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(Date.UTC(targetYear, targetMonth - i, 1));
       const mIndex = d.getUTCMonth();
@@ -196,12 +204,13 @@ export class AdminService {
       const key = `${y}-${String(mIndex + 1).padStart(2, "0")}`;
       monthsList.push({
         key,
-        month: MONTH_NAMES[mIndex],
+        shortMonth: MONTH_NAMES[mIndex],
         year: y,
       });
     }
 
-    const startDate = new Date(Date.UTC(monthsList[0].year, MONTH_NAMES.indexOf(monthsList[0].month), 1, 0, 0, 0, 0));
+    const firstMonthIdx = MONTH_NAMES.indexOf(monthsList[0].shortMonth);
+    const startDate = new Date(Date.UTC(monthsList[0].year, firstMonthIdx, 1, 0, 0, 0, 0));
     const endDate = new Date(Date.UTC(targetYear, targetMonth + 1, 1, 0, 0, 0, 0));
 
     const qb = Transaction.createQueryBuilder("tx")
@@ -230,8 +239,11 @@ export class AdminService {
 
     const volume: VolumeDataPoint[] = monthsList.map((m) => {
       const values = dataMap.get(m.key) || { approved: 0, pending: 0 };
+      const mIdx = MONTH_NAMES.indexOf(m.shortMonth);
       return {
-        month: m.month,
+        month: UI_MONTH_NAMES[mIdx],
+        shortMonth: m.shortMonth,
+        fullMonth: FULL_MONTH_NAMES[mIdx],
         year: m.year,
         monthKey: m.key,
         approved: values.approved,
@@ -322,24 +334,39 @@ export class AdminService {
           status: "approved",
           amount: approvedAmount,
           percentage: approvedPercentage,
-          formatted: `Approved: ${approvedPercentage}% (${approvedAmount.toLocaleString()})`,
+          formatted: `Approved: ${approvedPercentage}% (${approvedAmount.toLocaleString("en-US")})`,
+          color: "#00B69B",
         },
         {
           label: "Unapproved",
           status: "unapproved",
           amount: unapprovedAmount,
           percentage: unapprovedPercentage,
-          formatted: `Unapproved: ${unapprovedPercentage}% (${unapprovedAmount.toLocaleString()})`,
+          formatted: `Unapproved: ${unapprovedPercentage}% (${unapprovedAmount.toLocaleString("en-US")})`,
+          color: "#2D7FF9",
         },
         {
           label: "Pending",
           status: "pending",
           amount: pendingAmount,
           percentage: pendingPercentage,
-          formatted: `Pending: ${pendingPercentage}% (${pendingAmount.toLocaleString()})`,
+          formatted: `Pending: ${pendingPercentage}% (${pendingAmount.toLocaleString("en-US")})`,
+          color: "#5C61F2",
         },
       ],
     };
+  }
+
+  async getMerchantDropdown(): Promise<{ id: string; businessName: string }[]> {
+    return Merchant.find({
+      select: {
+        id: true,
+        businessName: true,
+      },
+      order: {
+        businessName: "ASC",
+      },
+    });
   }
 }
 

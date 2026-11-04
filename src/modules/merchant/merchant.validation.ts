@@ -22,6 +22,7 @@ export interface UpdateMerchantInput {
   businessName?: string;
   businessEmail?: string;
   contactPerson?: string;
+  countryCode?: string;
   phoneNumber?: string;
   businessType?: string;
   countryMarket?: string;
@@ -107,6 +108,7 @@ export const updateMerchantSchema = Joi.object({
     businessName: Joi.string().trim().max(150).optional(),
     businessEmail: Joi.string().trim().email().max(150).optional(),
     contactPerson: Joi.string().trim().max(150).allow(null, "").optional(),
+    countryCode: Joi.string().trim().max(10).allow(null, "").optional(),
     phoneNumber: Joi.string().trim().max(20).allow(null, "").optional(),
     businessType: Joi.string().trim().max(100).allow(null, "").optional(),
     countryMarket: Joi.string().trim().max(100).allow(null, "").optional(),

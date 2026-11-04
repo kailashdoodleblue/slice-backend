@@ -27,7 +27,7 @@ export class Merchant extends BaseEntity {
   @Column({ type: "varchar", length: 150, nullable: true })
   contactPerson: string | null;
 
-  @Column({ name: "country_code", type: "varchar", length: 10, nullable: true })
+  @Column({ type: "varchar", length: 10, nullable: true })
   countryCode: string | null;
 
   @Column({ type: "varchar", length: 20, nullable: true })

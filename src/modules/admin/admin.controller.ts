@@ -26,6 +26,14 @@ export class AdminController {
       data: distribution,
     });
   };
+
+  getMerchantDropdown = async (_req: Request, res: Response) => {
+    const merchants = await adminService.getMerchantDropdown();
+    return sendResponse(res, {
+      message: "Merchant dropdown list retrieved successfully",
+      data: merchants,
+    });
+  };
 }
 
 export const adminController = new AdminController();

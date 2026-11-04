@@ -34,5 +34,6 @@ router.get(
   validate(getDashboardIncentivesQuerySchema),
   adminController.getIncentiveDistribution
 );
+router.get("/dashboard/merchants", adminController.getMerchantDropdown);
 
 export default router;
