@@ -8,14 +8,19 @@ import {
   OneToOne,
   ManyToOne,
   JoinColumn,
+  Unique,
 } from "typeorm";
 import { User } from "./user.entity";
 import { Merchant } from "./merchant.entity";
 
+@Unique(["countryCode", "mobileNumber"])
 @Entity("staff")
 export class Staff extends BaseEntity {
   @PrimaryGeneratedColumn({ type: "bigint" })
   staffId: string;
+
+  @Column({ type: "varchar", length: 50, unique: true })
+  staffCode: string;
 
   @Column({ type: "bigint", unique: true })
   userId: string;
@@ -29,7 +34,7 @@ export class Staff extends BaseEntity {
   @Column({ type: "varchar", length: 10, default: "+971" })
   countryCode: string;
 
-  @Column({ type: "varchar", length: 20, unique: true })
+  @Column({ type: "varchar", length: 20 })
   mobileNumber: string;
 
   @CreateDateColumn({ type: "datetime" })

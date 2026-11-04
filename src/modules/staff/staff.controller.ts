@@ -47,6 +47,30 @@ export class StaffController {
       data: staff,
     });
   };
+
+  getMyProfile = async (req: Request, res: Response) => {
+    const profile = await staffService.getMyProfile(req.user!.id);
+    return sendResponse(res, {
+      message: "Staff profile retrieved successfully",
+      data: profile,
+    });
+  };
+
+  updateMyProfile = async (req: Request, res: Response) => {
+    const profile = await staffService.updateMyProfile(req.user!.id, req.body);
+    return sendResponse(res, {
+      message: "Staff profile updated successfully",
+      data: profile,
+    });
+  };
+
+  changePassword = async (req: Request, res: Response) => {
+    const result = await staffService.changePassword(req.user!.id, req.body);
+    return sendResponse(res, {
+      message: result.message,
+      data: { id: result.id },
+    });
+  };
 }
 
 export const staffController = new StaffController();

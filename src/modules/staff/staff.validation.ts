@@ -15,6 +15,18 @@ export interface UpdateStaffInput {
   mobileNumber?: string;
 }
 
+export interface UpdateMyProfileInput {
+  fullName?: string;
+  email?: string;
+  countryCode?: string;
+  mobileNumber?: string;
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface GetStaffQuery {
   page?: number;
   limit?: number;
@@ -127,5 +139,41 @@ export const staffIdParamSchema = Joi.object({
       "string.pattern.base": "ID must be a numeric string",
       "any.required": "Staff ID is required",
     }),
+  }).required(),
+});
+
+export const updateMyProfileSchema = Joi.object({
+  body: Joi.object({
+    fullName: Joi.string().trim().max(150).optional(),
+    email: Joi.string().trim().email().lowercase().optional().messages({
+      "string.email": "Please provide a valid email address",
+    }),
+    countryCode: Joi.string().trim().max(10).optional(),
+    mobileNumber: Joi.string().trim().max(20).optional(),
+  })
+    .min(1)
+    .required()
+    .messages({
+      "object.min": "At least one field must be provided for update",
+    }),
+});
+
+export const changePasswordSchema = Joi.object({
+  body: Joi.object({
+    currentPassword: Joi.string().required().messages({
+      "string.empty": "Current password is required",
+      "any.required": "Current password is required",
+    }),
+    newPassword: Joi.string()
+      .min(12)
+      .max(100)
+      .pattern(/^(?=.*[A-Za-z])(?=.*\d)/)
+      .required()
+      .messages({
+        "string.empty": "New password is required",
+        "any.required": "New password is required",
+        "string.min": "New password must be at least 12 characters",
+        "string.pattern.base": "New password must contain at least one letter and one number",
+      }),
   }).required(),
 });

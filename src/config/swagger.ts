@@ -139,6 +139,7 @@ export const swaggerSpec = {
         type: "object",
         properties: {
           staffId: { type: "string", example: "1" },
+          staffCode: { type: "string", example: "STF-0001" },
           userId: { type: "string", example: "2" },
           fullName: { type: "string", example: "John Doe" },
           merchantId: { type: "string", example: "1" },
