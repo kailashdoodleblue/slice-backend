@@ -5,11 +5,43 @@ import { Staff } from "../../entities/staff.entity";
 import { Transaction } from "../../entities/transaction.entity";
 import { MerchantStatus } from "../../constants";
 import { AppError } from "../../utils/AppError";
-import { SubmitTransactionInput } from "./transaction.validation";
+import { getPaginationMeta } from "../../utils/pagination";
+import {
+  SubmitTransactionInput,
+  GetTransactionsQuery,
+} from "./transaction.validation";
 
 const CURRENCY = "AED";
 const REF_PREFIX = "TX-";
 const REF_BASE = 1000;
+const GST_OFFSET_MS = 4 * 60 * 60 * 1000;
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const currentMonthGst = (): string => {
+  const d = new Date(Date.now() + GST_OFFSET_MS);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+};
+
+const monthKeyGst = (date: Date): string => {
+  const d = new Date(date.getTime() + GST_OFFSET_MS);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+};
+
+const monthNameGst = (date: Date): string => {
+  const gst = new Date(date.getTime() + GST_OFFSET_MS);
+  return MONTH_NAMES[gst.getUTCMonth()];
+};
+
+const monthRange = (month: string) => {
+  const [y, m] = month.split("-").map(Number);
+  const start = new Date(Date.UTC(y, m - 1, 1) - GST_OFFSET_MS);
+  const end = new Date(Date.UTC(y, m, 1) - GST_OFFSET_MS);
+  return { start, end };
+};
 
 export type TransactionStatus = "pending" | "approved" | "rejected";
 
@@ -102,6 +134,89 @@ export class TransactionService {
       incentiveAmount: saved.incentive,
       note: STATUS_NOTES[status],
       rejectionReason: saved.remarks,
+    };
+  }
+
+  async getAllTransactions(userId: string, query: GetTransactionsQuery = {}) {
+    const staff = await Staff.findOneBy({ userId });
+    if (!staff) {
+      throw AppError.forbidden("Only staff members can view transactions");
+    }
+
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const status = query.status ? query.status.toLowerCase() : "all";
+    const search = query.search ? query.search.trim() : undefined;
+    const month = query.month ? query.month.trim() : undefined;
+
+    const qb = Transaction.createQueryBuilder("t").where(
+      "t.staff_id = :staffId",
+      { staffId: staff.staffId }
+    );
+
+    if (month) {
+      const { start, end } = monthRange(month);
+      qb.andWhere("t.created_at >= :start AND t.created_at < :end", {
+        start,
+        end,
+      });
+    }
+
+    if (status === "approved") {
+      qb.andWhere("t.approval_status = 1");
+    } else if (status === "pending") {
+      qb.andWhere("t.approval_status = 0 AND t.remarks IS NULL");
+    } else if (status === "rejected") {
+      qb.andWhere("t.approval_status = 0 AND t.remarks IS NOT NULL");
+    }
+
+    if (search) {
+      qb.andWhere(
+        "(LOWER(t.authorization_code) LIKE :search OR LOWER(t.ref_id) LIKE :search)",
+        { search: `%${search.toLowerCase()}%` }
+      );
+    }
+
+    qb.orderBy("t.created_at", "DESC").addOrderBy("t.id", "DESC");
+    qb.skip(skip).take(limit);
+
+    const [rows, total] = await qb.getManyAndCount();
+    const curMonth = currentMonthGst();
+
+    const items = rows.map((tx) => {
+      const txStatus = getTransactionStatus(tx);
+      const txMonth = monthKeyGst(tx.createdAt);
+      const isPastMonth = txMonth < curMonth;
+
+      const note =
+        txStatus === "pending"
+          ? "Awaiting review · Not included in your balance."
+          : txStatus === "approved"
+          ? `Included in ${monthNameGst(tx.createdAt)} earnings · ${
+              isPastMonth ? "Settled." : "Awaiting settlement."
+            }`
+          : null;
+
+      return {
+        id: `tx-${tx.id}`,
+        reference: tx.refId,
+        authCode: tx.authorizationCode,
+        status: txStatus,
+        submittedAt: tx.createdAt,
+        transactionAmount: tx.transactionAmount,
+        currency: CURRENCY,
+        incentiveAmount: txStatus === "rejected" ? 0 : tx.incentive,
+        note,
+        rejectionReason: txStatus === "rejected" ? tx.remarks : null,
+      };
+    });
+
+    return {
+      defaultMonth: curMonth,
+      items,
+      meta: getPaginationMeta(total, page, limit),
     };
   }
 
