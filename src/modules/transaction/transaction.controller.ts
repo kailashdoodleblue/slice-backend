@@ -14,6 +14,18 @@ export class TransactionController {
       data: transaction,
     });
   };
+
+  getAllTransactions = async (req: Request, res: Response) => {
+    const { defaultMonth, items, meta } =
+      await transactionService.getAllTransactions(req.user!.id, req.query as any);
+    return res.status(200).json({
+      success: true,
+      message: "Transactions retrieved successfully",
+      defaultMonth,
+      data: items,
+      meta,
+    });
+  };
 }
 
 export const transactionController = new TransactionController();

@@ -63,6 +63,7 @@ export const swaggerSpec = {
     { name: "Merchants", description: "Merchant management (admin only)" },
     { name: "Staff", description: "Staff management (admin only)" },
     { name: "Transactions", description: "Staff transaction submission (staff only)" },
+    { name: "Staff Dashboard", description: "Monthly incentive and performance summary (staff only)" },
   ],
   components: {
     securitySchemes: {
@@ -325,6 +326,114 @@ export const swaggerSpec = {
     },
   },
   paths: {
+    // ===== Staff Dashboard =====
+    "/staff-dashboard": {
+      get: {
+        tags: ["Staff Dashboard"],
+        summary: "Monthly incentive and performance summary",
+        description:
+          "Returns the logged-in staff member's incentive (sum of the transactions incentive column, rejected excluded) and performance (volume and submitted count) for a month. The incentive and performance cards have separate month filters; both default to the current month. Months run on GST (UTC+4).",
+        security: secured,
+        parameters: [
+          {
+            name: "incentiveMonth",
+            in: "query",
+            required: false,
+            description: "Month for the incentive section (YYYY-MM). Defaults to current month.",
+            schema: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$", example: "2026-10" },
+          },
+          {
+            name: "performanceMonth",
+            in: "query",
+            required: false,
+            description: "Month for the performance section (YYYY-MM). Defaults to current month.",
+            schema: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$", example: "2026-10" },
+          },
+        ],
+        responses: {
+          "200": ok("Dashboard summary", {
+            type: "object",
+            properties: {
+              month: { type: "string", example: "2026-10", description: "Incentive month" },
+              currency: { type: "string", example: "AED" },
+              cutoffAt: { type: "string", format: "date-time", example: "2026-10-31T19:59:00.000Z" },
+              incentive: {
+                type: "object",
+                properties: {
+                  amount: { type: "number", example: 480, description: "Sum of the transactions table incentive column (approved + pending, rejected excluded)" },
+                  approvedCount: { type: "integer", example: 12 },
+                  pendingCount: { type: "integer", example: 4 },
+                  minimumApprovedCount: { type: "integer", example: 10 },
+                },
+              },
+              performance: {
+                type: "object",
+                properties: {
+                  month: { type: "string", example: "2026-10", description: "Performance month" },
+                  transactionVolume: { type: "number", example: 2450, description: "Sum of amounts (approved + pending)" },
+                  transactionsSubmitted: { type: "integer", example: 16 },
+                  targetProgress: {
+                    type: "object",
+                    properties: {
+                      current: { type: "integer", example: 70 },
+                      target: { type: "integer", example: 100 },
+                    },
+                  },
+                },
+              },
+            },
+          }),
+          "400": validation400,
+          "401": authErrors["401"],
+          "403": authErrors["403"],
+        },
+      },
+    },
+
+    "/staff-dashboard/recent-transactions": {
+      get: {
+        tags: ["Staff Dashboard"],
+        summary: "Get latest 3 recent transactions",
+        description: "Returns the latest 3 transactions submitted by the logged-in staff member.",
+        security: secured,
+        responses: {
+          "200": {
+            description: "Latest 3 recent transactions",
+            content: json({
+              type: "object",
+              properties: {
+                success: { type: "boolean", example: true },
+                data: {
+                  type: "array",
+                  maxItems: 3,
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "string", example: "tx-1" },
+                      reference: { type: "string", example: "TX-1048" },
+                      authCode: { type: "string", example: "A7K9Q2" },
+                      status: { type: "string", enum: ["pending", "approved", "rejected"], example: "pending" },
+                      submittedAt: { type: "string", format: "date-time", example: "2026-10-20T06:30:00.000Z" },
+                      transactionAmount: { type: "number", example: 850 },
+                      incentiveAmount: { type: "number", example: 40 },
+                      note: {
+                        type: "string",
+                        nullable: true,
+                        example: "Awaiting review · Not included in your balance.",
+                      },
+                      rejectionReason: { type: "string", nullable: true, example: null },
+                    },
+                  },
+                },
+              },
+            }),
+          },
+          "401": authErrors["401"],
+          "403": authErrors["403"],
+        },
+      },
+    },
+
     // ===== Health =====
     "/health": {
       get: {
@@ -599,6 +708,85 @@ export const swaggerSpec = {
 
     // ===== Transactions =====
     "/transactions": {
+      get: {
+        tags: ["Transactions"],
+        summary: "Get all transactions (paginated)",
+        description:
+          "Returns a paginated list of transactions submitted by the logged-in staff member, ordered with the latest transaction on top. Defaults to page 1 with 10 items per page.",
+        security: secured,
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            required: false,
+            description: "Page number (defaults to 1)",
+            schema: { type: "integer", minimum: 1, default: 1, example: 1 },
+          },
+          {
+            name: "limit",
+            in: "query",
+            required: false,
+            description: "Items per page (defaults to 10, max 50)",
+            schema: { type: "integer", minimum: 1, maximum: 50, default: 10, example: 10 },
+          },
+          {
+            name: "month",
+            in: "query",
+            required: false,
+            description: "Optional month filter in YYYY-MM format",
+            schema: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$", example: "2026-10" },
+          },
+          {
+            name: "status",
+            in: "query",
+            required: false,
+            description: "Optional status filter",
+            schema: {
+              type: "string",
+              enum: ["all", "pending", "approved", "rejected"],
+              default: "all",
+            },
+          },
+          {
+            name: "search",
+            in: "query",
+            required: false,
+            description: "Search by approval code or reference ID",
+            schema: { type: "string", example: "A7K9Q2" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Paginated transactions list",
+            content: json({
+              type: "object",
+              properties: {
+                success: { type: "boolean", example: true },
+                message: { type: "string", example: "Transactions retrieved successfully" },
+                defaultMonth: { type: "string", example: "2026-10" },
+                data: {
+                  type: "array",
+                  items: ref("TransactionData"),
+                },
+                meta: {
+                  type: "object",
+                  properties: {
+                    page: { type: "integer", example: 1 },
+                    limit: { type: "integer", example: 10 },
+                    total: { type: "integer", example: 35 },
+                    totalPages: { type: "integer", example: 4 },
+                    hasNextPage: { type: "boolean", example: true },
+                    hasPrevPage: { type: "boolean", example: false },
+                  },
+                },
+              },
+            }),
+          },
+          "400": validation400,
+          "401": authErrors["401"],
+          "403": authErrors["403"],
+        },
+      },
       post: {
         tags: ["Transactions"],
         summary: "Submit a transaction",
