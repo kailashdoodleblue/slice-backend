@@ -53,12 +53,13 @@ export const swaggerSpec = {
     title: "Slice API",
     version: "1.0.0",
     description:
-      "Slice backend API. Log in via `POST /auth/login`, then click **Authorize** and paste the returned token (without the `Bearer ` prefix).",
+      "Slice backend API. Log in via `POST /auth/admin/login` or `POST /auth/staff/login`, then click **Authorize** and paste the returned token (without the `Bearer ` prefix).",
   },
   servers: [{ url: "/api" }],
   tags: [
     { name: "Health", description: "Service health check" },
-    { name: "Auth", description: "Login and profile" },
+    { name: "Auth", description: "Login, session, and password recovery" },
+    { name: "Admin Dashboard", description: "Admin dashboard stats and analytics (admin only)" },
     { name: "Users", description: "User management (admin only)" },
     { name: "Merchants", description: "Merchant management (admin only)" },
     { name: "Staff", description: "Staff management (admin only)" },
@@ -142,6 +143,7 @@ export const swaggerSpec = {
           userId: { type: "string", example: "2" },
           fullName: { type: "string", example: "John Doe" },
           merchantId: { type: "string", example: "1" },
+          countryCode: { type: "string", example: "+1" },
           mobileNumber: { type: "string", example: "+971500000000" },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time", nullable: true },
@@ -151,6 +153,28 @@ export const swaggerSpec = {
       },
 
       // ----- auth -----
+      AdminLoginRequest: {
+        type: "object",
+        required: ["email", "password"],
+        properties: {
+          email: { type: "string", format: "email", example: "admin@slice.com" },
+          password: { type: "string", example: "AdminSecurePassword123!" },
+          remindMe: {
+            type: "boolean",
+            default: false,
+            example: true,
+            description: "If true, session token lasts 7 days instead of 1 day",
+          },
+        },
+      },
+      StaffLoginRequest: {
+        type: "object",
+        required: ["email", "password"],
+        properties: {
+          email: { type: "string", format: "email", example: "staff@example.com" },
+          password: { type: "string", example: "StaffPassword123!" },
+        },
+      },
       LoginRequest: {
         type: "object",
         required: ["email", "password"],
@@ -159,9 +183,34 @@ export const swaggerSpec = {
           password: { type: "string", example: "AdminSecurePassword123!" },
         },
       },
+      ForgotPasswordRequest: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: { type: "string", format: "email", example: "staff@example.com" },
+          portal: { type: "string", enum: ["admin", "staff"], example: "staff" },
+        },
+      },
+      ResetPasswordRequest: {
+        type: "object",
+        required: ["token", "password"],
+        properties: {
+          token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+          password: { type: "string", minLength: 6, maxLength: 100, example: "NewSecurePassword123!" },
+        },
+      },
       LoginData: {
         type: "object",
-        properties: { token: { type: "string" }, user: ref("User") },
+        properties: {
+          token: { type: "string" },
+          user: {
+            type: "object",
+            properties: {
+              email: { type: "string", format: "email", example: "admin@slice.com" },
+              name: { type: "string", example: "Admin" },
+            },
+          },
+        },
       },
 
       // ----- users -----
@@ -238,6 +287,7 @@ export const swaggerSpec = {
           password: { type: "string", minLength: 6, maxLength: 100 },
           fullName: { type: "string", maxLength: 150, example: "John Doe" },
           merchantId: { type: "string", pattern: "^\\d+$", example: "1" },
+          countryCode: { type: "string", maxLength: 10, default: "+1", example: "+1" },
           mobileNumber: { type: "string", maxLength: 20, example: "+971500000000" },
         },
       },
@@ -246,6 +296,7 @@ export const swaggerSpec = {
         minProperties: 1,
         properties: {
           fullName: { type: "string", maxLength: 150 },
+          countryCode: { type: "string", maxLength: 10, example: "+1" },
           mobileNumber: { type: "string", maxLength: 20 },
         },
       },
@@ -357,16 +408,84 @@ export const swaggerSpec = {
     },
 
     // ===== Auth =====
+    "/auth/admin/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Admin login and receive a JWT",
+        description: "Authenticate with administrator credentials. Returns 403 if the user is not an administrator.",
+        requestBody: body("AdminLoginRequest"),
+        responses: {
+          "200": ok("Admin login successful", ref("LoginData"), "Admin login successful"),
+          "400": validation400,
+          "401": errRes("Invalid email or password"),
+          "403": errRes("Access denied: Not an administrator account or account is inactive"),
+        },
+      },
+    },
+    "/auth/staff/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Staff login and receive a JWT",
+        description: "Authenticate with staff credentials. Returns 403 if the user is not a staff member.",
+        requestBody: body("StaffLoginRequest"),
+        responses: {
+          "200": ok("Staff login successful", ref("LoginData"), "Staff login successful"),
+          "400": validation400,
+          "401": errRes("Invalid email or password"),
+          "403": errRes("Access denied: Not a staff account or account is inactive"),
+        },
+      },
+    },
     "/auth/login": {
       post: {
         tags: ["Auth"],
-        summary: "Log in and receive a JWT",
+        summary: "General login and receive a JWT",
         requestBody: body("LoginRequest"),
         responses: {
           "200": ok("Login successful", ref("LoginData"), "Login successful"),
           "400": validation400,
           "401": errRes("Invalid email or password"),
           "403": errRes("Account is inactive"),
+        },
+      },
+    },
+    "/auth/forgot-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Request a password reset link",
+        description: "Sends a password reset link via email. Generates portal-specific reset link depending on account role.",
+        requestBody: body("ForgotPasswordRequest"),
+        responses: {
+          "200": ok(
+            "Password reset link sent",
+            {
+              type: "object",
+              properties: {
+                email: { type: "string", example: "staff@example.com" },
+                portal: { type: "string", example: "staff" },
+              },
+            },
+            "Password reset link has been sent to your email"
+          ),
+          "400": validation400,
+          "403": errRes("Account is inactive"),
+          "404": errRes("Account not found with this email"),
+        },
+      },
+    },
+    "/auth/reset-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Reset password using reset token",
+        description: "Verifies the reset token from the link and updates the user's password.",
+        requestBody: body("ResetPasswordRequest"),
+        responses: {
+          "200": ok(
+            "Password reset successfully",
+            undefined,
+            "Password reset successfully. You can now log in with your new password."
+          ),
+          "400": validation400,
         },
       },
     },
@@ -391,6 +510,183 @@ export const swaggerSpec = {
           "200": ok("Logged out", undefined, "Logged out successfully"),
           "401": authErrors["401"],
           "403": authErrors["403"],
+        },
+      },
+    },
+
+    // ===== Admin Dashboard =====
+    "/admin/dashboard": {
+      get: {
+        tags: ["Admin Dashboard"],
+        summary: "Get admin dashboard KPI metrics",
+        description:
+          "Aggregates key KPI card metrics: total & pending transactions, approved & pending incentives, total & new merchants this month, total & new staff this month.",
+        security: secured,
+        responses: {
+          "200": ok(
+            "Admin dashboard statistics",
+            {
+              type: "object",
+              properties: {
+                transactions: {
+                  type: "object",
+                  properties: { total: { type: "integer", example: 120 }, pending: { type: "integer", example: 15 } },
+                },
+                incentives: {
+                  type: "object",
+                  properties: { approved: { type: "number", example: 4500.5 }, pending: { type: "number", example: 620 } },
+                },
+                merchants: {
+                  type: "object",
+                  properties: { total: { type: "integer", example: 45 }, thisMonth: { type: "integer", example: 8 } },
+                },
+                staff: {
+                  type: "object",
+                  properties: { total: { type: "integer", example: 130 }, thisMonth: { type: "integer", example: 22 } },
+                },
+              },
+            },
+            "Admin dashboard statistics retrieved successfully"
+          ),
+          ...authErrors,
+        },
+      },
+    },
+    "/admin/dashboard/graph": {
+      get: {
+        tags: ["Admin Dashboard"],
+        summary: "Get 6-month incentive volume trend graph",
+        description:
+          "Returns approved and pending incentive volume for the 6 months ending in the target month. Filterable by month and merchant.",
+        security: secured,
+        parameters: [
+          {
+            name: "month",
+            in: "query",
+            schema: { type: "string", example: "Oct 2026" },
+            description: "Target month (defaults to current month)",
+          },
+          {
+            name: "merchantId",
+            in: "query",
+            schema: { type: "string", example: "1" },
+            description: "Optional merchant filter",
+          },
+          {
+            name: "year",
+            in: "query",
+            schema: { type: "integer", example: 2026 },
+            description: "Optional year",
+          },
+        ],
+        responses: {
+          "200": ok(
+            "Volume graph data",
+            {
+              type: "object",
+              properties: {
+                filter: {
+                  type: "object",
+                  properties: {
+                    merchantId: { type: "string", example: "all" },
+                    selectedMonth: { type: "string", example: "Oct 2026" },
+                    startDate: { type: "string", example: "2026-05-01" },
+                    endDate: { type: "string", example: "2026-11-01" },
+                  },
+                },
+                volume: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      month: { type: "string", example: "May" },
+                      year: { type: "integer", example: 2026 },
+                      monthKey: { type: "string", example: "2026-05" },
+                      approved: { type: "number", example: 3500 },
+                      pending: { type: "number", example: 2800 },
+                      total: { type: "number", example: 6300 },
+                    },
+                  },
+                },
+              },
+            },
+            "Dashboard incentive volume graph retrieved successfully"
+          ),
+          ...authErrors,
+        },
+      },
+    },
+    "/admin/dashboard/incentives": {
+      get: {
+        tags: ["Admin Dashboard"],
+        summary: "Get monthly incentive distribution breakdown (Approved vs Unapproved vs Pending)",
+        description:
+          "Returns the pie chart distribution of approved, unapproved (rejected), and pending incentives for the selected month.",
+        security: secured,
+        parameters: [
+          {
+            name: "month",
+            in: "query",
+            schema: { type: "string", example: "Oct 2026" },
+            description: "Target month (defaults to current month)",
+          },
+          {
+            name: "merchantId",
+            in: "query",
+            schema: { type: "string", example: "1" },
+            description: "Optional merchant filter",
+          },
+          {
+            name: "year",
+            in: "query",
+            schema: { type: "integer", example: 2026 },
+            description: "Optional year",
+          },
+        ],
+        responses: {
+          "200": ok(
+            "Incentive distribution data",
+            {
+              type: "object",
+              properties: {
+                month: { type: "string", example: "October 2026" },
+                currency: { type: "string", example: "AED" },
+                totalIncentive: { type: "number", example: 100000 },
+                breakdown: {
+                  type: "object",
+                  properties: {
+                    approved: {
+                      type: "object",
+                      properties: { amount: { type: "number" }, percentage: { type: "number" }, count: { type: "integer" } },
+                    },
+                    unapproved: {
+                      type: "object",
+                      properties: { amount: { type: "number" }, percentage: { type: "number" }, count: { type: "integer" } },
+                    },
+                    pending: {
+                      type: "object",
+                      properties: { amount: { type: "number" }, percentage: { type: "number" }, count: { type: "integer" } },
+                    },
+                  },
+                },
+                chart: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      label: { type: "string", example: "Approved" },
+                      status: { type: "string", example: "approved" },
+                      amount: { type: "number", example: 50000 },
+                      percentage: { type: "number", example: 50 },
+                      formatted: { type: "string", example: "Approved: 50% (50,000)" },
+                    },
+                  },
+                },
+              },
+            },
+            "Dashboard incentive distribution retrieved successfully"
+          ),
+          ...authErrors,
         },
       },
     },

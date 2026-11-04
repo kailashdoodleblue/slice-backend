@@ -10,7 +10,11 @@ import {
 
 const router = Router();
 
-router.post("/login", validate(loginSchema), authController.login);
+// Separate Admin and Staff logins
+router.post("/admin/login", validate(loginSchema), authController.adminLogin);
+router.post("/staff/login", validate(loginSchema), authController.staffLogin);
+
+// Password recovery
 router.post(
   "/forgot-password",
   validate(forgotPasswordSchema),
@@ -21,6 +25,8 @@ router.post(
   validate(resetPasswordSchema),
   authController.resetPassword
 );
+
+// Authenticated session routes
 router.get("/me", authenticate, authController.me);
 router.post("/logout", authenticate, authController.logout);
 

@@ -15,6 +15,12 @@ export class InitialMigration1730450000000 implements MigrationInterface {
             generationStrategy: "increment",
           },
           {
+            name: "name",
+            type: "varchar",
+            length: "150",
+            isNullable: true,
+          },
+          {
             name: "email",
             type: "varchar",
             length: "150",

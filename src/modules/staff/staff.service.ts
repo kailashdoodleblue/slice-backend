@@ -43,8 +43,9 @@ export class StaffService {
       // 4. Hash the password
       const hashedPassword = await bcrypt.hash(input.password, 10);
 
-      // 5. Create User record with role staff
+      // 5. Create User record with role staff and name
       const user = manager.getRepository(User).create({
+        name: input.fullName.trim(),
         email: input.email.trim().toLowerCase(),
         password: hashedPassword,
         role: UserRole.STAFF,
@@ -71,6 +72,7 @@ export class StaffService {
         createdAt: savedStaff.createdAt,
         user: {
           id: savedUser.id,
+          name: savedUser.name,
           email: savedUser.email,
           role: savedUser.role,
           status: savedUser.status,
@@ -163,6 +165,11 @@ export class StaffService {
 
     if (input.fullName !== undefined) {
       staff.fullName = input.fullName.trim();
+      const user = await User.findOneBy({ id: staff.userId });
+      if (user) {
+        user.name = input.fullName.trim();
+        await user.save();
+      }
     }
 
     return staff.save();

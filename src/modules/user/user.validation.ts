@@ -1,6 +1,7 @@
 import Joi from "joi";
 
 export interface CreateUserInput {
+  name?: string;
   email: string;
   password?: string;
   role?: string;
@@ -8,12 +9,14 @@ export interface CreateUserInput {
 }
 
 export interface UpdateUserInput {
+  name?: string;
   email?: string;
   status?: string;
 }
 
 export const createUserSchema = Joi.object({
   body: Joi.object({
+    name: Joi.string().trim().max(150).optional(),
     email: Joi.string().trim().email().max(150).required().messages({
       "string.email": "Invalid email address",
       "string.empty": "Email is required",
@@ -32,6 +35,7 @@ export const updateUserSchema = Joi.object({
     }),
   }).required(),
   body: Joi.object({
+    name: Joi.string().trim().max(150).optional(),
     email: Joi.string().trim().email().max(150).optional(),
     status: Joi.string().valid("Active", "Inactive").optional(),
   })

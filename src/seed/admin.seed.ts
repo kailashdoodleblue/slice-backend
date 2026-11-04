@@ -17,6 +17,7 @@ export const seedAdminUser = async (): Promise<void> => {
   if (!existingAdmin) {
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
     const admin = User.create({
+      name: "Admin",
       email: adminEmail,
       password: hashedPassword,
       role: UserRole.ADMIN,
@@ -25,6 +26,11 @@ export const seedAdminUser = async (): Promise<void> => {
     await admin.save();
     console.log(`✅ Default Admin user seeded (${adminEmail})`);
   } else {
+    // If admin already exists but name is null, ensure name is populated
+    if (!existingAdmin.name) {
+      existingAdmin.name = "Admin";
+      await existingAdmin.save();
+    }
     console.log(`ℹ️ Admin user already exists (${adminEmail})`);
   }
 };
