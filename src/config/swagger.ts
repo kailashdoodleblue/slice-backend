@@ -19,7 +19,12 @@ const errRes = (description: string, schema = "ErrorResponse") => ({
   content: json(ref(schema)),
 });
 
-const ok = (description: string, dataSchema?: any, message = "Success") => ({
+const ok = (
+  description: string,
+  dataSchema?: any,
+  message = "Success",
+  metaSchema?: any
+) => ({
   description,
   content: json({
     type: "object",
@@ -27,6 +32,7 @@ const ok = (description: string, dataSchema?: any, message = "Success") => ({
       success: { type: "boolean", example: true },
       message: { type: "string", example: message },
       ...(dataSchema ? { data: dataSchema } : {}),
+      ...(metaSchema ? { meta: metaSchema } : {}),
     },
   }),
 });
@@ -96,6 +102,17 @@ export const swaggerSpec = {
           },
         },
       },
+      PaginationMeta: {
+        type: "object",
+        properties: {
+          page: { type: "integer", example: 1 },
+          limit: { type: "integer", example: 7 },
+          total: { type: "integer", example: 25 },
+          totalPages: { type: "integer", example: 4 },
+          hasNextPage: { type: "boolean", example: true },
+          hasPrevPage: { type: "boolean", example: false },
+        },
+      },
 
       // ----- entities -----
       User: {
@@ -134,6 +151,11 @@ export const swaggerSpec = {
             type: "number",
             example: 5.5,
             description: "Incentive % applied to submitted transactions",
+          },
+          staffCount: {
+            type: "integer",
+            example: 4,
+            description: "Total number of staff assigned to this merchant",
           },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time", nullable: true },
@@ -928,10 +950,53 @@ export const swaggerSpec = {
     "/merchants": {
       get: {
         tags: ["Merchants"],
-        summary: "List merchants",
+        summary: "List merchants (paginated)",
+        description:
+          "Returns a paginated list of merchants with staff count. Supports filtering by status and searching by business name, merchant code, registration number, location, or contact details.",
         security: secured,
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            required: false,
+            description: "Page number (defaults to 1)",
+            schema: { type: "integer", minimum: 1, default: 1, example: 1 },
+          },
+          {
+            name: "limit",
+            in: "query",
+            required: false,
+            description: "Items per page (defaults to 7, max 50)",
+            schema: { type: "integer", minimum: 1, maximum: 50, default: 7, example: 7 },
+          },
+          {
+            name: "status",
+            in: "query",
+            required: false,
+            description: "Filter merchants by status",
+            schema: {
+              type: "string",
+              enum: ["all", "active", "inactive"],
+              default: "all",
+            },
+          },
+          {
+            name: "search",
+            in: "query",
+            required: false,
+            description:
+              "Search by merchant name, registration code, location (city/address/country), or primary contact (name/email/phone)",
+            schema: { type: "string", maxLength: 100, example: "Acme" },
+          },
+        ],
         responses: {
-          "200": ok("Merchant list", { type: "array", items: ref("Merchant") }),
+          "200": ok(
+            "Paginated merchant list",
+            { type: "array", items: ref("Merchant") },
+            "Merchants retrieved successfully",
+            ref("PaginationMeta")
+          ),
+          "400": validation400,
           ...authErrors,
         },
       },
