@@ -107,9 +107,20 @@ export class MerchantService {
       staffCount: countMap.get(String(m.id)) || 0,
     }));
 
+    const [all, active, inactive] = await Promise.all([
+      this.getTotalMerchantCount(),
+      this.getTotalActiveMerchant(),
+      this.getTotalInActiveMerchant(),
+    ]);
+
     return {
       merchants: formattedMerchants,
       meta: getPaginationMeta(total, page, limit),
+      counts: {
+        all,
+        active,
+        inactive,
+      }
     };
   }
 
